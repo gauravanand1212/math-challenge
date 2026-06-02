@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Advanced 7th–8th Grade Math Challenge</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 850px;
+      margin: 30px auto;
+      padding: 0 18px;
+      line-height: 1.5;
+      background: #fafafa;
+      color: #222;
+    }
+    h1 { text-align: center; }
+    .question {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 18px;
+      margin: 18px 0;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    input {
+      width: 95%;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 8px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px 6px 10px 0;
+    }
+    button:hover { background: #1d4ed8; }
+    .result {
+      font-weight: bold;
+      font-size: 20px;
+      margin-top: 20px;
+    }
+    .feedback {
+      margin-top: 8px;
+      font-weight: bold;
+    }
+    .correct { color: #15803d; }
+    .wrong { color: #b91c1c; }
+    .hint {
+      color: #555;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Advanced 7th–8th Grade Math Challenge</h1>
+  <p>Try all 10 questions. Enter simplified answers where possible. For word problems, include only the number or dimensions requested.</p>
+
+  <form id="quizForm">
+
+    <div class="question">
+      <h3>1. Multi-Step Equation</h3>
+      <p>Solve for x: <strong>3(x − 4) + 5 = 2x + 12</strong></p>
+      <input id="q1" placeholder="Your answer" />
+      <div id="f1" class="feedback"></div>
+    </div>
+
+    <div class="question">
+      <h3>2. Fraction Equation</h3>
+      <p>Solve: <strong>x/3 + x/6 = 15</strong></p>
+      <input id="q2" placeholder="Your answer" />
+      <div id="f2" class="feedback"></div>
+    </div>
+
+    <div class="question">
+      <h3>3. Percent Increase and Decrease</h3>
+      <p>A jacket's price is increased by 20% and then decreased by 20%. The final price is $96. What was the original price?</p>
+      <input id="q3" placeholder="Your answer" />
+      <div id="f3" class="feedback"></div>
+    </div>
+
+    <div class="question">
+      <h3>4. Ratio and Proportion</h3>
+      <p>The ratio of boys to girls in a club is 5:7. If there are 84 students, how many are boys?</p>
+      <input id="q4" placeholder="Your answer" />
+      <div id="f4" class="feedback"></div>
+    </div>
+
+    <div class="question">
+      <h3>5. Geometry</h3>
+      <p>A rectangle has a perimeter of 50 cm. Its length is 3 cm more than twice its width. Find the dimensions.</p>
+      <p class="hint">Format example: width 8 length 19</p>
+      <input id="q5" placeholder="Your answer" />
+      <div id="f5" class="feedback"></div>
+    </div>
+
+    <div class="question">
+      <h3>6. Pythagorean Theorem</h3>
+      <p>A ladder is placed against a wall. The foot is 9 ft from the wall and the top reaches 12 ft up. How long is the ladder?</p>
+      <input id="q6" placeholder="Your answer" />
+      <div id="f6" class="feedback"></div>
+    </div>
+
+    <div class="question">
+      <h3>7. Probability</h3>
+      <p>Two fair six-sided dice are rolled. What is the probability that the sum is exactly 8?</p>
+      <p class="hint">Give a simplified fraction.</p>
+      <input id="q7" placeholder="Your answer" />
+      <div id="f7" class="feedback"></div>
+    </div>
+
+    <div class="question">
+      <h3>8. Linear Functions</h3>
+      <p>For <strong>y = 4x − 3</strong>, find y when x = −2. Then say whether (3,9) lies on the graph.</p>
+      <p class="hint">Format example: -11 yes</p>
+      <input id="q8" placeholder="Your answer" />
+      <div id="f8" class="feedback"></div>
+    </div>
+
+    <div class="question">
+      <h3>9. Consecutive Integers</h3>
+      <p>Three consecutive integers have a sum of 72. What are the integers?</p>
+      <input id="q9" placeholder="Your answer" />
+      <div id="f9" class="feedback"></div>
+    </div>
+
+    <div class="question">
+      <h3>10. Tank Capacity</h3>
+      <p>A tank is 3/5 full. After adding 24 gallons, it becomes 3/4 full. What is the total capacity?</p>
+      <input id="q10" placeholder="Your answer" />
+      <div id="f10" class="feedback"></div>
+    </div>
+
+    <button type="button" onclick="gradeQuiz()">Check Answers</button>
+    <button type="button" onclick="showAnswers()">Show Answers</button>
+    <button type="reset" onclick="clearFeedback()">Reset</button>
+
+    <div id="score" class="result"></div>
+  </form>
+
+<script>
+function clean(s) {
+  return s.toLowerCase().replace(/\$/g,'').replace(/,/g,'').replace(/\s+/g,' ').trim();
+}
+
+const answerCheckers = [
+  s => clean(s) === "19" || clean(s) === "x=19",
+  s => clean(s) === "30" || clean(s) === "x=30",
+  s => clean(s) === "100",
+  s => clean(s) === "35",
+  s => {
+    let t = clean(s);
+    return (t.includes("8") && t.includes("19") && (t.includes("width") || t.includes("w")) && (t.includes("length") || t.includes("l")))
+      || t === "8 19" || t === "19 8";
+  },
+  s => clean(s) === "15",
+  s => clean(s) === "5/36",
+  s => {
+    let t = clean(s);
+    return t.includes("-11") && (t.includes("yes") || t.includes("on"));
+  },
+  s => {
+    let t = clean(s);
+    return t.includes("23") && t.includes("24") && t.includes("25");
+  },
+  s => clean(s) === "160"
+];
+
+const answerText = [
+  "x = 19",
+  "x = 30",
+  "$100",
+  "35 boys",
+  "Width = 8 cm, Length = 19 cm",
+  "15 ft",
+  "5/36",
+  "y = -11; yes, (3,9) is on the graph",
+  "23, 24, 25",
+  "160 gallons"
+];
+
+function gradeQuiz() {
+  let score = 0;
+  for (let i = 1; i <= 10; i++) {
+    const val = document.getElementById("q" + i).value;
+    const ok = answerCheckers[i - 1](val);
+    const f = document.getElementById("f" + i);
+    if (ok) {
+      score++;
+      f.textContent = "Correct!";
+      f.className = "feedback correct";
+    } else {
+      f.textContent = "Not quite. Try again.";
+      f.className = "feedback wrong";
+    }
+  }
+  document.getElementById("score").textContent = "Score: " + score + " / 10";
+}
+
+function showAnswers() {
+  for (let i = 1; i <= 10; i++) {
+    const f = document.getElementById("f" + i);
+    f.textContent = "Answer: " + answerText[i - 1];
+    f.className = "feedback";
+  }
+}
+
+function clearFeedback() {
+  for (let i = 1; i <= 10; i++) {
+    document.getElementById("f" + i).textContent = "";
+  }
+  document.getElementById("score").textContent = "";
+}
+</script>
+</body>
+</html>
