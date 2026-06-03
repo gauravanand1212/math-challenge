@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>4th–5th Grade Math Challenge</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 850px;
+      margin: 30px auto;
+      padding: 0 18px;
+      line-height: 1.5;
+      background: #fafafa;
+      color: #222;
+    }
+    h1 { text-align: center; }
+    .question {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 18px;
+      margin: 18px 0;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    input {
+      width: 95%;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 8px;
+    }
+    button {
+      background: #7c3aed;
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px 6px 10px 0;
+    }
+    button:hover:not(:disabled) { background: #6d28d9; }
+    button:disabled {
+      background: #c4b5fd;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .result {
+      font-weight: bold;
+      font-size: 20px;
+      margin-top: 20px;
+    }
+    .feedback {
+      margin-top: 8px;
+      font-weight: bold;
+    }
+    .correct { color: #15803d; }
+    .wrong { color: #b91c1c; }
+    .hint {
+      color: #555;
+      font-size: 14px;
+    }
+    .sync-status {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; margin-top: 14px; padding: 10px 16px;
+      border-radius: 8px; font-family: monospace; width: fit-content;
+    }
+    .sync-status.syncing { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+    .sync-status.synced  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .sync-status.sync-err { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .sync-dot.pulse { animation: pulse 1s infinite; }
+    #loading-msg { color: #555; font-style: italic; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <h1>4th–5th Grade Math Challenge</h1>
+  <p>Try all 15 questions. Enter simplified answers where possible. For word problems, include only the number or value requested.</p>
+  <p style="margin-top:6px"><a href="progress.html" style="color:#7c3aed;font-size:14px">View Progress →</a></p>
+
+  <div id="loading-msg">Loading today’s questions…</div>
+
+  <form id="quizForm" style="display:none">
+    <div id="questions-container"></div>
+
+    <button type="button" id="checkBtn" onclick="gradeQuiz()">Check Answers</button>
+    <button type="button" id="showAnswersBtn" onclick="showAnswers()" disabled>Show Answers</button>
+    <button type="reset" onclick="clearFeedback()">Reset</button>
+
+    <div id="score" class="result"></div>
+    <div class="sync-status syncing" id="sync-status" style="display:none">
+      <div class="sync-dot pulse" id="sync-dot"></div>
+      <span id="sync-text">Saving results…</span>
+    </div>
+  </form>
+
+<script>
+  const SUPABASE_URL = 'https://jivcocultvmibdhnuncw.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_orpPb5Con2_VAdyH_EiQUw_S6SbtgrZ';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const FALLBACK_QUESTIONS = [
+    { topic: 'Multiplication & Division',   grade: '4th', question_text: 'What is 144 ÷ 12?', correct_answer: '12', answer_hint: null, explanation: '144 ÷ 12 = 12.' },
+    { topic: 'Fractions — Understanding',   grade: '4th', question_text: 'A pizza is cut into 8 equal slices. If you eat 3 slices, what fraction of the pizza is left?', correct_answer: '5/8', answer_hint: 'Simplified fraction', explanation: '8 − 3 = 5 slices left. 5/8 of the pizza remains.' },
+    { topic: 'Decimals — Understanding',    grade: '4th', question_text: 'What is 0.6 + 0.8?', correct_answer: '1.4', answer_hint: null, explanation: '0.6 + 0.8 = 1.4.' },
+    { topic: 'Place Value',                 grade: '4th', question_text: 'In the number 7,452, what is the value of the digit 4?', correct_answer: '400', answer_hint: null, explanation: 'The 4 is in the hundreds place, so its value is 4 × 100 = 400.' },
+    { topic: 'Factors & Multiples',         grade: '4th', question_text: 'What is the greatest common factor (GCF) of 24 and 36?', correct_answer: '12', answer_hint: 'Just the number', explanation: 'Factors of 24: 1,2,3,4,6,8,12,24. Factors of 36: 1,2,3,4,6,9,12,18,36. GCF = 12.' },
+    { topic: 'Area & Perimeter',            grade: '4th', question_text: 'A rectangle is 8 cm long and 5 cm wide. What is its perimeter?', correct_answer: '26', answer_hint: 'Just the number in cm', explanation: 'Perimeter = 2 × (8 + 5) = 2 × 13 = 26 cm.' },
+    { topic: 'Fraction Operations',         grade: '5th', question_text: 'What is 3/4 + 2/3?', correct_answer: '17/12', answer_hint: 'Improper fraction or mixed number', explanation: 'Common denominator is 12: 9/12 + 8/12 = 17/12.' },
+    { topic: 'Decimal Operations',          grade: '5th', question_text: 'What is 4.5 × 0.6?', correct_answer: '2.7', answer_hint: null, explanation: '4.5 × 0.6: 45 × 6 = 270, then place decimal → 2.7.' },
+    { topic: 'Volume',                      grade: '5th', question_text: 'A box is 5 cm long, 4 cm wide, and 3 cm tall. What is its volume?', correct_answer: '60', answer_hint: 'Just the number in cm³', explanation: 'Volume = 5 × 4 × 3 = 60 cm³.' },
+    { topic: 'Coordinate Plane',            grade: '5th', question_text: 'Point A is at (2, 4). Point B is at (6, 4). What is the distance between them?', correct_answer: '4', answer_hint: 'Just the number', explanation: 'Same y-coordinate, so distance = |6 − 2| = 4 units.' },
+    { topic: 'Measurement & Conversion',   grade: '4th', question_text: 'How many centimeters are in 3 meters?', correct_answer: '300', answer_hint: 'Just the number', explanation: '1 meter = 100 cm. 3 × 100 = 300 cm.' },
+    { topic: 'Angles & Geometry',          grade: '4th', question_text: 'How many right angles does a rectangle have?', correct_answer: '4', answer_hint: null, explanation: 'A rectangle has 4 corners, each a 90° right angle.' },
+    { topic: 'Mixed Numbers',              grade: '5th', question_text: 'Convert 17/4 to a mixed number.', correct_answer: '4 1/4', answer_hint: 'Format: 4 1/4', explanation: '17 ÷ 4 = 4 remainder 1, so 17/4 = 4 1/4.' },
+    { topic: 'Number Patterns',            grade: '5th', question_text: 'What are the next two numbers in the pattern: 3, 6, 12, 24, …?', correct_answer: '48 96', answer_hint: 'Two numbers separated by a space', explanation: 'Each number doubles: 24 × 2 = 48, 48 × 2 = 96.' },
+    { topic: 'Data & Graphs',              grade: '5th', question_text: 'A bar chart shows: Red=8, Blue=5, Green=11. How many more Green than Blue?', correct_answer: '6', answer_hint: 'Just the number', explanation: '11 − 5 = 6.' },
+  ];
+
+  let questions = [];
+
+  function clean(s) {
+    return s.toLowerCase().replace(/\$/g,'').replace(/,/g,'').replace(/\s+/g,' ').trim();
+  }
+
+  function renderQuestions() {
+    const container = document.getElementById('questions-container');
+    container.innerHTML = questions.map((q, i) => `
+      <div class="question">
+        <h3>${i + 1}. ${q.topic}</h3>
+        <p>${q.question_text}</p>
+        ${q.answer_hint ? `<p class="hint">${q.answer_hint}</p>` : ''}
+        <input id="q${i+1}" placeholder="Your answer" />
+        <div id="f${i+1}" class="feedback"></div>
+      </div>
+    `).join('');
+  }
+
+  async function initQuestions() {
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error } = await supabaseClient
+      .from('questions')
+      .select('topic, grade, question_text, correct_answer, answer_hint, explanation')
+      .eq('session_date', today)
+      .eq('student', 'tara')
+      .order('id');
+
+    if (!error && data && data.length === 15) {
+      questions = data;
+    } else {
+      const { data: recent } = await supabaseClient
+        .from('questions')
+        .select('topic, grade, question_text, correct_answer, answer_hint, explanation')
+        .eq('student', 'tara')
+        .order('session_date', { ascending: false })
+        .order('id')
+        .limit(15);
+      questions = (recent && recent.length === 15) ? recent : FALLBACK_QUESTIONS;
+    }
+
+    document.getElementById('loading-msg').style.display = 'none';
+    renderQuestions();
+    document.getElementById('quizForm').style.display = 'block';
+  }
+
+  function gradeQuiz() {
+    let score = 0;
+    let allFilled = true;
+    const topicResults = {};
+
+    questions.forEach((q, i) => {
+      const val = document.getElementById(`q${i+1}`).value;
+      if (!val.trim()) allFilled = false;
+      const ok = clean(val) === clean(q.correct_answer);
+      if (!topicResults[q.topic]) topicResults[q.topic] = { correct: 0, total: 0 };
+      topicResults[q.topic].total++;
+      if (ok) {
+        score++;
+        topicResults[q.topic].correct++;
+      }
+      const f = document.getElementById(`f${i+1}`);
+      f.textContent = ok ? 'Correct!' : 'Not quite. Try again.';
+      f.className = `feedback ${ok ? 'correct' : 'wrong'}`;
+    });
+
+    document.getElementById('score').textContent = `Score: ${score} / 15`;
+    document.getElementById('showAnswersBtn').disabled = !allFilled;
+    saveResults(score, topicResults);
+  }
+
+  function showAnswers() {
+    questions.forEach((q, i) => {
+      const f = document.getElementById(`f${i+1}`);
+      f.textContent = `Answer: ${q.correct_answer}${q.explanation ? ' — ' + q.explanation : ''}`;
+      f.className = 'feedback';
+    });
+  }
+
+  function clearFeedback() {
+    questions.forEach((_, i) => {
+      document.getElementById(`f${i+1}`).textContent = '';
+      document.getElementById(`f${i+1}`).className = 'feedback';
+    });
+    document.getElementById('score').textContent = '';
+    document.getElementById('showAnswersBtn').disabled = true;
+    document.getElementById('sync-status').style.display = 'none';
+  }
+
+  async function saveResults(score, topicResults) {
+    const syncEl   = document.getElementById('sync-status');
+    const syncText = document.getElementById('sync-text');
+    const syncDot  = document.getElementById('sync-dot');
+    syncEl.style.display = 'flex';
+    syncEl.className = 'sync-status syncing';
+    syncDot.classList.add('pulse');
+    syncText.textContent = 'Saving results…';
+
+    const sessionId = Date.now().toString(36);
+    const rows = Object.entries(topicResults).map(([topic, {correct, total}]) => ({
+      session_id: sessionId,
+      student: 'tara',
+      topic,
+      correct_answers: correct,
+      total_questions: total,
+      percentage: Math.round((correct / total) * 100),
+      total_score: score,
+      total_quiz_questions: 15
+    }));
+
+    const { error } = await supabaseClient.from('quiz_results').insert(rows);
+    syncDot.classList.remove('pulse');
+    if (error) {
+      syncEl.className = 'sync-status sync-err';
+      syncText.textContent = '✗ Could not save results';
+      console.error(error);
+    } else {
+      syncEl.className = 'sync-status synced';
+      syncText.textContent = '✓ Results saved!';
+    }
+  }
+
+  initQuestions();
+</script>
+</body>
+</html>

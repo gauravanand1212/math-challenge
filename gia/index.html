@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Advanced 7th–8th Grade Math Challenge</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 850px;
+      margin: 30px auto;
+      padding: 0 18px;
+      line-height: 1.5;
+      background: #fafafa;
+      color: #222;
+    }
+    h1 { text-align: center; }
+    .question {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 18px;
+      margin: 18px 0;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    input {
+      width: 95%;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 8px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px 6px 10px 0;
+    }
+    button:hover:not(:disabled) { background: #1d4ed8; }
+    button:disabled {
+      background: #93c5fd;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .result {
+      font-weight: bold;
+      font-size: 20px;
+      margin-top: 20px;
+    }
+    .feedback {
+      margin-top: 8px;
+      font-weight: bold;
+    }
+    .correct { color: #15803d; }
+    .wrong { color: #b91c1c; }
+    .hint {
+      color: #555;
+      font-size: 14px;
+    }
+    .sync-status {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; margin-top: 14px; padding: 10px 16px;
+      border-radius: 8px; font-family: monospace; width: fit-content;
+    }
+    .sync-status.syncing { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .sync-status.synced  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .sync-status.sync-err { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .sync-dot.pulse { animation: pulse 1s infinite; }
+    #loading-msg { color: #555; font-style: italic; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <h1>Advanced 7th–8th Grade Math Challenge</h1>
+  <p>Try all 15 questions. Enter simplified answers where possible. For word problems, include only the number or dimensions requested.</p>
+  <p style="margin-top:6px"><a href="progress.html" style="color:#2563eb;font-size:14px">View Progress →</a></p>
+
+  <div id="loading-msg">Loading today’s questions…</div>
+
+  <form id="quizForm" style="display:none">
+    <div id="questions-container"></div>
+
+    <button type="button" id="checkBtn" onclick="gradeQuiz()">Check Answers</button>
+    <button type="button" id="showAnswersBtn" onclick="showAnswers()" disabled>Show Answers</button>
+    <button type="reset" onclick="clearFeedback()">Reset</button>
+
+    <div id="score" class="result"></div>
+    <div class="sync-status syncing" id="sync-status" style="display:none">
+      <div class="sync-dot pulse" id="sync-dot"></div>
+      <span id="sync-text">Saving results…</span>
+    </div>
+  </form>
+
+<script>
+  const SUPABASE_URL = 'https://jivcocultvmibdhnuncw.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_orpPb5Con2_VAdyH_EiQUw_S6SbtgrZ';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const FALLBACK_QUESTIONS = [
+    { topic: 'Multi-Step Equation',           grade: '7th', question_text: 'Solve for x: 3(x − 4) + 5 = 2x + 12', correct_answer: '19', answer_hint: null, explanation: 'Expand: 3x − 12 + 5 = 2x + 12 → x = 19.' },
+    { topic: 'Rational Numbers',              grade: '7th', question_text: 'Solve: x/3 + x/6 = 15', correct_answer: '30', answer_hint: null, explanation: 'Multiply through by 6: 2x + x = 90 → x = 30.' },
+    { topic: 'Percentages & Rates',           grade: '7th', question_text: "A jacket's price is increased by 20% then decreased by 20%. The final price is $96. What was the original price?", correct_answer: '100', answer_hint: 'Just the number', explanation: 'After +20% then −20%: price × 1.2 × 0.8 = price × 0.96. So 0.96p = 96 → p = 100.' },
+    { topic: 'Proportional Relationships',    grade: '7th', question_text: 'The ratio of boys to girls is 5:7. If there are 84 students, how many are boys?', correct_answer: '35', answer_hint: null, explanation: '84 × 5/12 = 35 boys.' },
+    { topic: 'Geometry',                      grade: '7th', question_text: 'A rectangle has a perimeter of 50 cm. Its length is 3 cm more than twice its width. Find the dimensions.', correct_answer: 'width 8 length 19', answer_hint: 'Format: width 8 length 19', explanation: '2(w + 2w+3) = 50 → w = 8, l = 19.' },
+    { topic: 'The Pythagorean Theorem',       grade: '8th', question_text: 'A ladder is placed against a wall. The foot is 9 ft from the wall and the top reaches 12 ft up. How long is the ladder?', correct_answer: '15', answer_hint: 'Just the number', explanation: 'c² = 9² + 12² = 81 + 144 = 225 → c = 15 ft.' },
+    { topic: 'Statistics & Probability',      grade: '7th', question_text: 'Two fair six-sided dice are rolled. What is the probability the sum is exactly 8?', correct_answer: '5/36', answer_hint: 'Simplified fraction', explanation: 'Pairs summing to 8: (2,6),(3,5),(4,4),(5,3),(6,2) = 5 out of 36.' },
+    { topic: 'Linear Functions',              grade: '8th', question_text: 'For y = 4x − 3, find y when x = −2. Then say whether (3, 9) lies on the graph.', correct_answer: '-11 yes', answer_hint: 'Format: -11 yes  or  -11 no', explanation: 'y = 4(−2)−3 = −11. Check (3,9): 4(3)−3 = 9 ✓ yes.' },
+    { topic: 'Expressions & Equations',       grade: '7th', question_text: 'Three consecutive integers have a sum of 72. What are the integers?', correct_answer: '23 24 25', answer_hint: 'Three numbers separated by spaces', explanation: 'n + (n+1) + (n+2) = 72 → n = 23.' },
+    { topic: 'Exponents & Scientific Notation', grade: '8th', question_text: 'A tank is 3/5 full. After adding 24 gallons it becomes 3/4 full. What is the total capacity?', correct_answer: '160', answer_hint: 'Just the number', explanation: '3/4 − 3/5 = 3/20. So 3/20 × capacity = 24 → capacity = 160.' },
+    { topic: 'Inequalities',       grade: '7th', question_text: 'Solve: 2x + 3 > 11', correct_answer: 'x > 4', answer_hint: null, explanation: '2x > 8 → x > 4.' },
+    { topic: 'Angles & Triangles', grade: '7th', question_text: 'A triangle has angles of 45° and 75°. What is the third angle?', correct_answer: '60', answer_hint: 'Degrees', explanation: '180 − 45 − 75 = 60°.' },
+    { topic: 'Surface Area & Volume', grade: '8th', question_text: 'A box is 5 cm × 4 cm × 3 cm. What is its volume?', correct_answer: '60', answer_hint: 'cm³', explanation: '5 × 4 × 3 = 60 cm³.' },
+    { topic: 'Data & Scatter Plots', grade: '8th', question_text: 'A scatter plot shows points going up from left to right. Is the correlation positive or negative?', correct_answer: 'positive', answer_hint: null, explanation: 'Points rising left to right indicate a positive correlation.' },
+    { topic: 'Transformations', grade: '8th', question_text: 'Point A is at (3, 5). After reflection over the x-axis, what are the new coordinates?', correct_answer: '(3, -5)', answer_hint: 'Format: (x, y)', explanation: 'Reflecting over the x-axis negates the y-coordinate: (3, 5) → (3, −5).' },
+  ];
+
+  let questions = [];
+
+  function clean(s) {
+    return s.toLowerCase().replace(/\$/g,'').replace(/,/g,'').replace(/\s+/g,' ').trim();
+  }
+
+  function renderQuestions() {
+    const container = document.getElementById('questions-container');
+    container.innerHTML = questions.map((q, i) => `
+      <div class="question">
+        <h3>${i + 1}. ${q.topic}</h3>
+        <p>${q.question_text}</p>
+        ${q.answer_hint ? `<p class="hint">${q.answer_hint}</p>` : ''}
+        <input id="q${i+1}" placeholder="Your answer" />
+        <div id="f${i+1}" class="feedback"></div>
+      </div>
+    `).join('');
+  }
+
+  async function initQuestions() {
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error } = await supabaseClient
+      .from('questions')
+      .select('topic, grade, question_text, correct_answer, answer_hint, explanation')
+      .eq('session_date', today)
+      .eq('student', 'gia')
+      .order('id');
+
+    if (!error && data && data.length === 15) {
+      questions = data;
+    } else {
+      const { data: recent } = await supabaseClient
+        .from('questions')
+        .select('topic, grade, question_text, correct_answer, answer_hint, explanation')
+        .eq('student', 'gia')
+        .order('session_date', { ascending: false })
+        .order('id')
+        .limit(15);
+      questions = (recent && recent.length === 15) ? recent : FALLBACK_QUESTIONS;
+    }
+
+    document.getElementById('loading-msg').style.display = 'none';
+    renderQuestions();
+    document.getElementById('quizForm').style.display = 'block';
+  }
+
+  function gradeQuiz() {
+    let score = 0;
+    let allFilled = true;
+    const topicResults = {};
+
+    questions.forEach((q, i) => {
+      const val = document.getElementById(`q${i+1}`).value;
+      if (!val.trim()) allFilled = false;
+      const ok = clean(val) === clean(q.correct_answer);
+      if (!topicResults[q.topic]) topicResults[q.topic] = { correct: 0, total: 0 };
+      topicResults[q.topic].total++;
+      if (ok) {
+        score++;
+        topicResults[q.topic].correct++;
+      }
+      const f = document.getElementById(`f${i+1}`);
+      f.textContent = ok ? 'Correct!' : 'Not quite. Try again.';
+      f.className = `feedback ${ok ? 'correct' : 'wrong'}`;
+    });
+
+    document.getElementById('score').textContent = `Score: ${score} / 15`;
+    document.getElementById('showAnswersBtn').disabled = !allFilled;
+    saveResults(score, topicResults);
+  }
+
+  function showAnswers() {
+    questions.forEach((q, i) => {
+      const f = document.getElementById(`f${i+1}`);
+      f.textContent = `Answer: ${q.correct_answer}${q.explanation ? ' — ' + q.explanation : ''}`;
+      f.className = 'feedback';
+    });
+  }
+
+  function clearFeedback() {
+    questions.forEach((_, i) => {
+      document.getElementById(`f${i+1}`).textContent = '';
+      document.getElementById(`f${i+1}`).className = 'feedback';
+    });
+    document.getElementById('score').textContent = '';
+    document.getElementById('showAnswersBtn').disabled = true;
+    document.getElementById('sync-status').style.display = 'none';
+  }
+
+  async function saveResults(score, topicResults) {
+    const syncEl   = document.getElementById('sync-status');
+    const syncText = document.getElementById('sync-text');
+    const syncDot  = document.getElementById('sync-dot');
+    syncEl.style.display = 'flex';
+    syncEl.className = 'sync-status syncing';
+    syncDot.classList.add('pulse');
+    syncText.textContent = 'Saving results…';
+
+    const sessionId = Date.now().toString(36);
+    const rows = Object.entries(topicResults).map(([topic, {correct, total}]) => ({
+      session_id: sessionId,
+      student: 'gia',
+      topic,
+      correct_answers: correct,
+      total_questions: total,
+      percentage: Math.round((correct / total) * 100),
+      total_score: score,
+      total_quiz_questions: 15
+    }));
+
+    const { error } = await supabaseClient.from('quiz_results').insert(rows);
+    syncDot.classList.remove('pulse');
+    if (error) {
+      syncEl.className = 'sync-status sync-err';
+      syncText.textContent = '✗ Could not save results';
+      console.error(error);
+    } else {
+      syncEl.className = 'sync-status synced';
+      syncText.textContent = '✓ Results saved!';
+    }
+  }
+
+  initQuestions();
+</script>
+</body>
+</html>
