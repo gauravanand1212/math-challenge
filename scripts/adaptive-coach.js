@@ -1,29 +1,46 @@
-// Analyzes Gia's recent quiz performance and writes difficulty-config.json for question generation.
-// Run before generate-questions.js: node scripts/adaptive-coach.js
+// Analyzes a student's recent quiz performance and writes a difficulty config for question generation.
+// Run before generate-questions.js: STUDENT=gia node scripts/adaptive-coach.js
 
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
+
+const STUDENT = process.env.STUDENT || 'gia';
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const TOPICS = [
-  { topic: 'Proportional Relationships',      grade: '7th' },
-  { topic: 'Percentages & Rates',             grade: '7th' },
-  { topic: 'Rational Numbers',                grade: '7th' },
-  { topic: 'Expressions & Equations',         grade: '7th' },
-  { topic: 'Statistics & Probability',        grade: '7th' },
-  { topic: 'Linear Functions',                grade: '8th' },
-  { topic: 'Systems of Equations',            grade: '8th' },
-  { topic: 'Geometry',                        grade: '8th' },
-  { topic: 'The Pythagorean Theorem',         grade: '8th' },
-  { topic: 'Exponents & Scientific Notation', grade: '8th' },
-];
+const TOPICS_BY_STUDENT = {
+  gia: [
+    { topic: 'Proportional Relationships',      grade: '7th' },
+    { topic: 'Percentages & Rates',             grade: '7th' },
+    { topic: 'Rational Numbers',                grade: '7th' },
+    { topic: 'Expressions & Equations',         grade: '7th' },
+    { topic: 'Statistics & Probability',        grade: '7th' },
+    { topic: 'Linear Functions',                grade: '8th' },
+    { topic: 'Systems of Equations',            grade: '8th' },
+    { topic: 'Geometry',                        grade: '8th' },
+    { topic: 'The Pythagorean Theorem',         grade: '8th' },
+    { topic: 'Exponents & Scientific Notation', grade: '8th' },
+  ],
+  tara: [
+    { topic: 'Multiplication & Division',       grade: '4th' },
+    { topic: 'Fractions — Understanding',       grade: '4th' },
+    { topic: 'Decimals — Understanding',        grade: '4th' },
+    { topic: 'Place Value',                     grade: '4th' },
+    { topic: 'Factors & Multiples',             grade: '4th' },
+    { topic: 'Area & Perimeter',                grade: '4th' },
+    { topic: 'Fraction Operations',             grade: '5th' },
+    { topic: 'Decimal Operations',              grade: '5th' },
+    { topic: 'Volume',                          grade: '5th' },
+    { topic: 'Coordinate Plane',                grade: '5th' },
+  ],
+};
 
-// Difficulty levels and the Gemini prompt instruction for each
+const TOPICS = TOPICS_BY_STUDENT[STUDENT] || TOPICS_BY_STUDENT.gia;
+
 const DIFFICULTY = {
   1: {
     name: 'foundational',
@@ -43,8 +60,6 @@ const DIFFICULTY = {
   },
 };
 
-// Score thresholds for each difficulty level
-// >= 85% → advanced, 70–84% → challenging, 50–69% → standard, < 50% → foundational
 function levelFromScore(avg) {
   if (avg >= 85) return 4;
   if (avg >= 70) return 3;
@@ -52,21 +67,25 @@ function levelFromScore(avg) {
   return 1;
 }
 
-// Weighted average: most recent sessions count more
 function weightedAverage(sessions) {
   const n = sessions.length;
   let weightedSum = 0;
   let totalWeight = 0;
   sessions.forEach((s, i) => {
-    const weight = n - i; // index 0 (most recent) gets weight n
+    const weight = n - i;
     weightedSum += s.percentage * weight;
     totalWeight += weight;
   });
   return weightedSum / totalWeight;
 }
 
+function configPath() {
+  return path.join(__dirname, '..', `${STUDENT}-difficulty-config.json`);
+}
+
 function buildDefaultConfig(reason) {
   return {
+    student: STUDENT,
     generatedAt: new Date().toISOString().split('T')[0],
     coachSummary: reason,
     topicDifficulties: Object.fromEntries(
@@ -86,21 +105,21 @@ function buildDefaultConfig(reason) {
 }
 
 function writeConfig(config) {
-  const outPath = path.join(__dirname, '..', 'difficulty-config.json');
-  fs.writeFileSync(outPath, JSON.stringify(config, null, 2));
-  return outPath;
+  const p = configPath();
+  fs.writeFileSync(p, JSON.stringify(config, null, 2));
+  return p;
 }
 
 async function main() {
-  console.log("=== Gia's Adaptive Math Coach ===\n");
+  console.log(`=== Adaptive Math Coach — ${STUDENT.toUpperCase()} ===\n`);
 
-  // Fetch quiz results from the last 30 days
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 30);
 
   const { data: results, error } = await supabase
     .from('quiz_results')
     .select('topic, percentage, created_at')
+    .eq('student', STUDENT)
     .gte('created_at', cutoff.toISOString())
     .order('created_at', { ascending: false });
 
@@ -122,7 +141,6 @@ async function main() {
 
   console.log(`Analyzing ${results.length} quiz result(s) from the last 30 days.\n`);
 
-  // Group results by topic (up to 10 most recent per topic)
   const byTopic = {};
   for (const row of results) {
     if (!byTopic[row.topic]) byTopic[row.topic] = [];
@@ -131,7 +149,6 @@ async function main() {
     }
   }
 
-  // Calculate difficulty level for each topic
   const topicDifficulties = {};
   const excelling = [];
   const struggling = [];
@@ -159,7 +176,6 @@ async function main() {
     if (level === 1) struggling.push(topic);
   }
 
-  // Build coach summary
   const summaryParts = [];
   if (excelling.length) summaryParts.push(`Excelling at: ${excelling.join(', ')}`);
   if (struggling.length) summaryParts.push(`Needs support with: ${struggling.join(', ')}`);
@@ -168,6 +184,7 @@ async function main() {
     : 'Making steady progress across all topics.';
 
   const config = {
+    student: STUDENT,
     generatedAt: new Date().toISOString().split('T')[0],
     coachSummary,
     topicDifficulties,
@@ -175,7 +192,6 @@ async function main() {
 
   const outPath = writeConfig(config);
 
-  // Print assessment report
   console.log('COACH ASSESSMENT REPORT');
   console.log('─'.repeat(72));
   console.log(`Summary: ${coachSummary}\n`);
@@ -192,10 +208,8 @@ async function main() {
 
 main().catch(err => {
   console.error('Coach error:', err.message);
-  // Write default config so question generation can still proceed
   const config = buildDefaultConfig('Coach assessment failed — using standard difficulty as fallback.');
   writeConfig(config);
   console.log('Default difficulty config written as fallback.');
-  // Exit 0 so the workflow continues to question generation
   process.exit(0);
 });
