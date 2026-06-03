@@ -81,8 +81,12 @@ async function main() {
     .limit(1);
 
   if (existing && existing.length > 0) {
-    console.log(`Questions already exist for ${STUDENT} on ${today} — skipping.`);
-    return;
+    if (!process.env.FORCE) {
+      console.log(`Questions already exist for ${STUDENT} on ${today} — skipping. Use FORCE=1 to regenerate.`);
+      return;
+    }
+    console.log(`FORCE=1 set — deleting existing questions for ${STUDENT} on ${today} and regenerating.`);
+    await supabase.from('questions').delete().eq('session_date', today).eq('student', STUDENT);
   }
 
   const diffConfig = loadDifficultyConfig();
