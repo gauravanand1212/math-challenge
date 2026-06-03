@@ -19,6 +19,12 @@ jobs:
       - name: Install dependencies
         run: npm install @google/generative-ai @supabase/supabase-js
 
+      - name: Run adaptive coach (assess performance & set difficulty)
+        run: node scripts/adaptive-coach.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
       - name: Generate and save questions
         run: node scripts/generate-questions.js
         env:

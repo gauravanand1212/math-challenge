@@ -1,8 +1,11 @@
 // Generates 10 daily text-input quiz questions via Gemini and inserts them into Supabase.
+// Reads difficulty-config.json (produced by adaptive-coach.js) to tailor per-topic difficulty.
 // Run automatically by GitHub Actions at 3 AM UTC, or manually: node scripts/generate-questions.js
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const path = require('path');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const supabase = createClient(
@@ -23,6 +26,17 @@ const TOPICS = [
   { topic: 'Exponents & Scientific Notation', grade: '8th' },
 ];
 
+const STANDARD_INSTRUCTION = 'Generate a standard grade-appropriate problem with moderate complexity.';
+
+function loadDifficultyConfig() {
+  try {
+    const raw = fs.readFileSync(path.join(__dirname, '..', 'difficulty-config.json'), 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 async function main() {
   const today = new Date().toISOString().split('T')[0];
 
@@ -37,26 +51,43 @@ async function main() {
     return;
   }
 
+  const diffConfig = loadDifficultyConfig();
+  if (diffConfig) {
+    console.log(`Coach assessment (${diffConfig.generatedAt}): ${diffConfig.coachSummary}`);
+  } else {
+    console.log('No difficulty config found — using standard difficulty for all topics.');
+  }
+
   console.log(`Generating questions for ${today}...`);
 
-  const topicList = TOPICS.map((t, i) =>
-    `${i + 1}. ${t.topic} (${t.grade} grade)`
-  ).join('\n');
+  // Build topic list with per-topic difficulty instructions from the coach
+  const topicList = TOPICS.map((t, i) => {
+    const d = diffConfig?.topicDifficulties?.[t.topic];
+    const tag = d ? `[${d.levelName.toUpperCase()}]` : '[STANDARD]';
+    const instruction = d?.promptInstruction ?? STANDARD_INSTRUCTION;
+    return `${i + 1}. ${t.topic} (${t.grade} grade) — ${tag}: ${instruction}`;
+  }).join('\n');
 
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: { responseMimeType: 'application/json' },
   });
 
-  const result = await model.generateContent(`Create 10 short-answer math questions for 7th and 8th grade students following Khan Academy curriculum. One question per topic in the exact order listed.
+  const result = await model.generateContent(`Create 10 short-answer math questions for a 7th/8th grade student following Khan Academy curriculum. One question per topic in the exact order listed. Each topic has a difficulty tag and instruction that you MUST follow precisely.
 
-Topics:
+Topics (with difficulty instructions):
 ${topicList}
+
+Difficulty guide:
+- [FOUNDATIONAL]: Basic single-step problems, simple numbers, rebuild confidence
+- [STANDARD]: Grade-appropriate, moderate complexity
+- [CHALLENGING]: Multi-step reasoning, harder numbers, less obvious approach
+- [ADVANCED]: Complex multi-step problems, pushes well beyond grade level
 
 For each question return a JSON object with these fields:
 - "topic": exact topic string from the list
 - "grade": "7th" or "8th"
-- "question_text": the question (use concrete numbers, grade-appropriate difficulty)
+- "question_text": the question (follow the difficulty instruction for that topic exactly)
 - "correct_answer": the single canonical answer a student should type (e.g. "30", "5/36", "15 ft"). Keep it as simple as possible — just the number or value, no working.
 - "answer_hint": short format guide shown under the input (e.g. "Enter just the number", "Simplified fraction", "Include units"). Omit if the format is obvious.
 - "explanation": 1–2 sentence step-by-step solution
