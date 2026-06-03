@@ -39,7 +39,12 @@
       cursor: pointer;
       margin: 10px 6px 10px 0;
     }
-    button:hover { background: #1d4ed8; }
+    button:hover:not(:disabled) { background: #1d4ed8; }
+    button:disabled {
+      background: #93c5fd;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
     .result {
       font-weight: bold;
       font-size: 20px;
@@ -137,7 +142,7 @@
     </div>
 
     <button type="button" onclick="gradeQuiz()">Check Answers</button>
-    <button type="button" onclick="showAnswers()">Show Answers</button>
+    <button type="button" id="showAnswersBtn" onclick="showAnswers()" disabled>Show Answers</button>
     <button type="reset" onclick="clearFeedback()">Reset</button>
 
     <div id="score" class="result"></div>
@@ -186,8 +191,10 @@ const answerText = [
 
 function gradeQuiz() {
   let score = 0;
+  let allFilled = true;
   for (let i = 1; i <= 10; i++) {
     const val = document.getElementById("q" + i).value;
+    if (!val.trim()) allFilled = false;
     const ok = answerCheckers[i - 1](val);
     const f = document.getElementById("f" + i);
     if (ok) {
@@ -200,6 +207,7 @@ function gradeQuiz() {
     }
   }
   document.getElementById("score").textContent = "Score: " + score + " / 10";
+  document.getElementById("showAnswersBtn").disabled = !allFilled;
 }
 
 function showAnswers() {
@@ -215,6 +223,7 @@ function clearFeedback() {
     document.getElementById("f" + i).textContent = "";
   }
   document.getElementById("score").textContent = "";
+  document.getElementById("showAnswersBtn").disabled = true;
 }
 </script>
 </body>
