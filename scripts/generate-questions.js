@@ -1,4 +1,4 @@
-// Generates 10 daily quiz questions via Gemini and inserts them into Supabase.
+// Generates 10 daily text-input quiz questions via Gemini and inserts them into Supabase.
 // Run automatically by GitHub Actions at 3 AM UTC, or manually: node scripts/generate-questions.js
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -10,24 +10,22 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-// One question per topic, 5 from each grade — aligned to Khan Academy units
 const TOPICS = [
-  { topic: 'Proportional Relationships',     grade: '7th' },
-  { topic: 'Percentages & Rates',            grade: '7th' },
-  { topic: 'Rational Numbers',               grade: '7th' },
-  { topic: 'Expressions & Equations',        grade: '7th' },
-  { topic: 'Statistics & Probability',       grade: '7th' },
-  { topic: 'Linear Functions',               grade: '8th' },
-  { topic: 'Systems of Equations',           grade: '8th' },
-  { topic: 'Geometry',                       grade: '8th' },
-  { topic: 'The Pythagorean Theorem',        grade: '8th' },
-  { topic: 'Exponents & Scientific Notation',grade: '8th' },
+  { topic: 'Proportional Relationships',      grade: '7th' },
+  { topic: 'Percentages & Rates',             grade: '7th' },
+  { topic: 'Rational Numbers',                grade: '7th' },
+  { topic: 'Expressions & Equations',         grade: '7th' },
+  { topic: 'Statistics & Probability',        grade: '7th' },
+  { topic: 'Linear Functions',                grade: '8th' },
+  { topic: 'Systems of Equations',            grade: '8th' },
+  { topic: 'Geometry',                        grade: '8th' },
+  { topic: 'The Pythagorean Theorem',         grade: '8th' },
+  { topic: 'Exponents & Scientific Notation', grade: '8th' },
 ];
 
 async function main() {
   const today = new Date().toISOString().split('T')[0];
 
-  // Idempotent: skip if questions already exist for today
   const { data: existing } = await supabase
     .from('questions')
     .select('id')
@@ -50,23 +48,23 @@ async function main() {
     generationConfig: { responseMimeType: 'application/json' },
   });
 
-  const result = await model.generateContent(`Create 10 multiple-choice math questions for 7th and 8th grade students following Khan Academy curriculum. One question per topic, in the exact order listed.
+  const result = await model.generateContent(`Create 10 short-answer math questions for 7th and 8th grade students following Khan Academy curriculum. One question per topic in the exact order listed.
 
 Topics:
 ${topicList}
 
-For each question return a JSON object with exactly these fields:
-- "topic": the exact topic string from the list above
+For each question return a JSON object with these fields:
+- "topic": exact topic string from the list
 - "grade": "7th" or "8th"
-- "question_text": the question (concrete numbers, grade-appropriate difficulty)
-- "options": array of exactly 4 answer strings
-- "answer_index": 0-based integer (0–3) of the correct answer
+- "question_text": the question (use concrete numbers, grade-appropriate difficulty)
+- "correct_answer": the single canonical answer a student should type (e.g. "30", "5/36", "15 ft"). Keep it as simple as possible — just the number or value, no working.
+- "answer_hint": short format guide shown under the input (e.g. "Enter just the number", "Simplified fraction", "Include units"). Omit if the format is obvious.
 - "explanation": 1–2 sentence step-by-step solution
 
 Constraints:
-- Wrong choices must represent realistic student mistakes (not obviously absurd)
 - Questions must be solvable without a calculator
-- Vary question formats (word problems, equations, diagrams described in text)
+- correct_answer must be a simple string a student can type exactly
+- Vary question types: equations, word problems, geometry, probability
 
 Return a JSON object with a single key "questions" containing an array of 10 objects.`);
 
@@ -87,7 +85,9 @@ Return a JSON object with a single key "questions" containing an array of 10 obj
   if (error) throw error;
 
   console.log(`✓ Saved ${rows.length} questions for ${today}`);
-  rows.forEach((q, i) => console.log(`  ${i + 1}. [${q.grade}] ${q.topic} — ${q.question_text.slice(0, 60)}...`));
+  rows.forEach((q, i) =>
+    console.log(`  ${i + 1}. [${q.grade}] ${q.topic} — answer: ${q.correct_answer}`)
+  );
 }
 
 main().catch(err => {

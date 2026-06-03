@@ -1,510 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Math Quest · Gia</title>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-  :root {
-    --bg: #0f0e17;
-    --card: #1a1927;
-    --border: #2e2c45;
-    --accent1: #ff6b6b;
-    --accent2: #ffd166;
-    --accent3: #06d6a0;
-    --accent4: #74b9ff;
-    --text: #fffffe;
-    --muted: #a7a5c3;
-    --correct: #06d6a0;
-    --wrong: #ff6b6b;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Nunito', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image:
-      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.15) 0%, transparent 100%),
-      radial-gradient(1px 1px at 80% 10%, rgba(255,255,255,0.1) 0%, transparent 100%),
-      radial-gradient(2px 2px at 40% 20%, rgba(255,209,102,0.2) 0%, transparent 100%),
-      radial-gradient(2px 2px at 90% 70%, rgba(116,185,255,0.2) 0%, transparent 100%);
-    pointer-events: none; z-index: 0;
-  }
-  .container { width: 100%; max-width: 680px; position: relative; z-index: 1; }
-  header { text-align: center; margin-bottom: 32px; animation: slideDown 0.6s ease; }
-  header .badge {
-    display: inline-block;
-    background: linear-gradient(135deg, var(--accent4), var(--accent3));
-    color: var(--bg); font-family: 'Space Mono', monospace;
-    font-size: 11px; font-weight: 700; letter-spacing: 2px;
-    padding: 4px 14px; border-radius: 20px; text-transform: uppercase; margin-bottom: 12px;
-  }
-  header h1 {
-    font-size: clamp(36px, 8vw, 56px); font-weight: 900; line-height: 1;
-    background: linear-gradient(135deg, var(--accent2) 0%, var(--accent1) 50%, var(--accent4) 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  }
-  header p { color: var(--muted); margin-top: 8px; font-size: 15px; }
-  header a { color: var(--accent4); font-size: 13px; text-decoration: none; }
-  header a:hover { text-decoration: underline; }
-  .progress-wrap { margin-bottom: 24px; }
-  .progress-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .progress-meta span { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); }
-  .score-pill {
-    background: var(--card); border: 1px solid var(--border);
-    padding: 4px 12px; border-radius: 20px;
-    font-family: 'Space Mono', monospace; font-size: 12px; color: var(--accent3);
-  }
-  .progress-track { height: 6px; background: var(--border); border-radius: 4px; overflow: hidden; }
-  .progress-fill {
-    height: 100%; background: linear-gradient(90deg, var(--accent4), var(--accent3));
-    border-radius: 4px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
-  }
-  .card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 20px; padding: 32px; margin-bottom: 20px;
-    position: relative; overflow: hidden; animation: slideUp 0.4s cubic-bezier(0.4,0,0.2,1);
-  }
-  .card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, var(--accent1), var(--accent2), var(--accent3), var(--accent4));
-  }
-  .topic-tag {
-    display: inline-block; font-family: 'Space Mono', monospace;
-    font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-    padding: 3px 10px; border-radius: 6px; margin-bottom: 14px;
-  }
-  .q-number { font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; margin-bottom: 10px; }
-  .question-text { font-size: clamp(17px, 3.5vw, 20px); font-weight: 700; line-height: 1.5; }
-  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-  @media (max-width: 480px) { .options { grid-template-columns: 1fr; } .card { padding: 24px 20px; } }
-  .option-btn {
-    background: var(--bg); border: 2px solid var(--border); border-radius: 14px;
-    padding: 16px 20px; color: var(--text); font-family: 'Nunito', sans-serif;
-    font-size: 15px; font-weight: 700; cursor: pointer; text-align: left;
-    transition: all 0.2s ease; display: flex; align-items: center; gap: 12px;
-  }
-  .option-btn:hover:not(:disabled) { border-color: var(--accent4); background: rgba(116,185,255,0.08); transform: translateY(-2px); }
-  .option-btn .letter {
-    width: 28px; height: 28px; border-radius: 8px; background: var(--border);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700;
-    flex-shrink: 0; transition: all 0.2s;
-  }
-  .option-btn.correct { border-color: var(--correct); background: rgba(6,214,160,0.12); }
-  .option-btn.correct .letter { background: var(--correct); color: var(--bg); }
-  .option-btn.wrong { border-color: var(--wrong); background: rgba(255,107,107,0.12); }
-  .option-btn.wrong .letter { background: var(--wrong); color: var(--bg); }
-  .option-btn:disabled { cursor: default; transform: none; }
-  .feedback {
-    padding: 14px 18px; border-radius: 12px; font-weight: 700; font-size: 14px;
-    margin-bottom: 16px; display: none; align-items: flex-start; gap: 10px;
-    animation: popIn 0.3s cubic-bezier(0.4,0,0.2,1);
-  }
-  .feedback.show { display: flex; }
-  .feedback.correct-fb { background: rgba(6,214,160,0.15); border: 1px solid rgba(6,214,160,0.4); color: var(--correct); }
-  .feedback.wrong-fb { background: rgba(255,107,107,0.15); border: 1px solid rgba(255,107,107,0.4); color: var(--wrong); }
-  .feedback .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
-  .feedback .fb-text { line-height: 1.5; }
-  .feedback .fb-text strong { display: block; font-size: 15px; margin-bottom: 2px; }
-  .feedback .fb-text span { font-weight: 400; color: var(--text); opacity: 0.85; font-size: 13px; }
-  .next-btn {
-    width: 100%; padding: 16px;
-    background: linear-gradient(135deg, var(--accent4), var(--accent3));
-    border: none; border-radius: 14px; color: var(--bg);
-    font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 900;
-    cursor: pointer; transition: all 0.2s ease; display: none;
-  }
-  .next-btn:hover { opacity: 0.9; transform: translateY(-2px); }
-  .next-btn.show { display: block; animation: fadeIn 0.3s ease; }
-  .results { text-align: center; padding: 40px 32px; animation: slideUp 0.5s ease; }
-  .results-emoji { font-size: 64px; margin-bottom: 16px; display: block; animation: bounce 0.6s ease 0.3s both; }
-  .results h2 { font-size: 32px; font-weight: 900; margin-bottom: 8px; }
-  .results .sub { color: var(--muted); font-size: 15px; margin-bottom: 32px; }
-  .score-display { display: inline-flex; align-items: baseline; gap: 4px; margin-bottom: 8px; }
-  .score-big {
-    font-family: 'Space Mono', monospace; font-size: 72px; font-weight: 700; line-height: 1;
-    background: linear-gradient(135deg, var(--accent2), var(--accent1));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  }
-  .score-denom { font-family: 'Space Mono', monospace; font-size: 28px; color: var(--muted); }
-  .stars-row { display: flex; justify-content: center; gap: 6px; font-size: 28px; margin: 16px 0 32px; }
-  .category-breakdown {
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 14px; padding: 20px; margin-bottom: 20px; text-align: left;
-  }
-  .category-breakdown h3 {
-    font-size: 12px; text-transform: uppercase; letter-spacing: 2px;
-    color: var(--muted); font-family: 'Space Mono', monospace; margin-bottom: 14px;
-  }
-  .cat-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px;
-  }
-  .cat-row:last-child { border-bottom: none; }
-  .cat-name { color: var(--muted); }
-  .cat-score { font-family: 'Space Mono', monospace; font-weight: 700; }
-  .cat-score.full { color: var(--correct); }
-  .cat-score.partial { color: var(--accent2); }
-  .cat-score.none { color: var(--wrong); }
-  .sync-status {
-    display: flex; align-items: center; gap: 8px; justify-content: center;
-    font-size: 12px; margin-bottom: 20px; padding: 10px 16px;
-    border-radius: 10px; font-family: 'Space Mono', monospace;
-  }
-  .sync-status.syncing { background: rgba(116,185,255,0.1); color: var(--accent4); border: 1px solid rgba(116,185,255,0.3); }
-  .sync-status.synced { background: rgba(6,214,160,0.1); color: var(--correct); border: 1px solid rgba(6,214,160,0.3); }
-  .sync-status.sync-err { background: rgba(255,107,107,0.1); color: var(--wrong); border: 1px solid rgba(255,107,107,0.3); }
-  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-  .sync-dot.pulse { animation: pulse 1s infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-  .retry-btn {
-    width: 100%; padding: 16px;
-    background: linear-gradient(135deg, var(--accent1), var(--accent2));
-    border: none; border-radius: 14px; color: var(--bg);
-    font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 900;
-    cursor: pointer; transition: all 0.2s ease;
-  }
-  .retry-btn:hover { opacity: 0.9; transform: translateY(-2px); }
-  #start-screen { text-align: center; }
-  .start-card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 20px;
-    padding: 40px 32px; position: relative; overflow: hidden;
-    animation: slideUp 0.5s ease 0.2s both;
-  }
-  .start-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, var(--accent1), var(--accent2), var(--accent3), var(--accent4));
-  }
-  .topic-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 24px 0 32px; }
-  .chip { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; border: 1.5px solid; }
-  .start-btn {
-    width: 100%; padding: 18px;
-    background: linear-gradient(135deg, var(--accent4), var(--accent3));
-    border: none; border-radius: 14px; color: var(--bg);
-    font-family: 'Nunito', sans-serif; font-size: 18px; font-weight: 900;
-    cursor: pointer; transition: all 0.25s ease;
-  }
-  .start-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-3px); box-shadow: 0 12px 32px rgba(6,214,160,0.3); }
-  .start-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  #quiz-screen, #results-screen { display: none; }
-  #quiz-screen.active, #results-screen.active { display: block; }
-  @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-  @keyframes bounce { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-14px); } 70% { transform: translateY(-6px); } }
-  .shake { animation: shake 0.4s ease; }
-  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
-  .loading-dots::after { content: '...'; animation: ldots 1.2s infinite steps(1); }
-  @keyframes ldots { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} 100%{content:'.'} }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Advanced 7th–8th Grade Math Challenge</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 850px;
+      margin: 30px auto;
+      padding: 0 18px;
+      line-height: 1.5;
+      background: #fafafa;
+      color: #222;
+    }
+    h1 { text-align: center; }
+    .question {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 18px;
+      margin: 18px 0;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    input {
+      width: 95%;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 8px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px 6px 10px 0;
+    }
+    button:hover:not(:disabled) { background: #1d4ed8; }
+    button:disabled {
+      background: #93c5fd;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .result {
+      font-weight: bold;
+      font-size: 20px;
+      margin-top: 20px;
+    }
+    .feedback {
+      margin-top: 8px;
+      font-weight: bold;
+    }
+    .correct { color: #15803d; }
+    .wrong { color: #b91c1c; }
+    .hint {
+      color: #555;
+      font-size: 14px;
+    }
+    .sync-status {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; margin-top: 14px; padding: 10px 16px;
+      border-radius: 8px; font-family: monospace; width: fit-content;
+    }
+    .sync-status.syncing { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .sync-status.synced  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .sync-status.sync-err { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .sync-dot.pulse { animation: pulse 1s infinite; }
+    #loading-msg { color: #555; font-style: italic; margin: 20px 0; }
+  </style>
 </head>
 <body>
-<div class="container">
-  <header>
-    <div class="badge">7th &amp; 8th Grade · Khan Academy</div>
-    <h1>Math Quest ✦</h1>
-    <p>10 questions · results saved automatically &nbsp;·&nbsp; <a href="progress.html">View Progress →</a></p>
-  </header>
+  <h1>Advanced 7th–8th Grade Math Challenge</h1>
+  <p>Try all 10 questions. Enter simplified answers where possible. For word problems, include only the number or dimensions requested.</p>
+  <p style="margin-top:6px"><a href="progress.html" style="color:#2563eb;font-size:14px">View Progress →</a></p>
 
-  <div id="start-screen">
-    <div class="start-card">
-      <p style="color:var(--muted);font-size:15px;line-height:1.7;">Sharpen your skills across the topics you're learning this year. A fresh set of questions is generated every day!</p>
-      <div class="topic-chips">
-        <span class="chip" style="color:#ffd166;border-color:#ffd166;background:rgba(255,209,102,0.1)">Proportional Relationships</span>
-        <span class="chip" style="color:#ffd166;border-color:#ffd166;background:rgba(255,209,102,0.1)">Percentages &amp; Rates</span>
-        <span class="chip" style="color:#ff6b6b;border-color:#ff6b6b;background:rgba(255,107,107,0.1)">Rational Numbers</span>
-        <span class="chip" style="color:#06d6a0;border-color:#06d6a0;background:rgba(6,214,160,0.1)">Expressions &amp; Equations</span>
-        <span class="chip" style="color:#c77dff;border-color:#c77dff;background:rgba(199,125,255,0.1)">Statistics &amp; Probability</span>
-        <span class="chip" style="color:#c77dff;border-color:#c77dff;background:rgba(199,125,255,0.1)">Linear Functions</span>
-        <span class="chip" style="color:#74b9ff;border-color:#74b9ff;background:rgba(116,185,255,0.1)">Systems of Equations</span>
-        <span class="chip" style="color:#74b9ff;border-color:#74b9ff;background:rgba(116,185,255,0.1)">Geometry</span>
-        <span class="chip" style="color:#74b9ff;border-color:#74b9ff;background:rgba(116,185,255,0.1)">The Pythagorean Theorem</span>
-        <span class="chip" style="color:#ff9f43;border-color:#ff9f43;background:rgba(255,159,67,0.1)">Exponents &amp; Scientific Notation</span>
-      </div>
-      <button class="start-btn" id="start-btn" onclick="startQuiz()" disabled>
-        <span id="start-label">Loading today's questions<span class="loading-dots"></span></span>
-      </button>
-    </div>
-  </div>
+  <div id="loading-msg">Loading today's questions…</div>
 
-  <div id="quiz-screen">
-    <div class="progress-wrap">
-      <div class="progress-meta">
-        <span id="q-counter">Question 1 of 10</span>
-        <div class="score-pill">Score: <span id="live-score">0</span></div>
-      </div>
-      <div class="progress-track">
-        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
-      </div>
-    </div>
-    <div class="card" id="question-card">
-      <div class="topic-tag" id="topic-tag"></div>
-      <div class="q-number" id="q-number"></div>
-      <div class="question-text" id="question-text"></div>
-    </div>
-    <div class="options" id="options-grid"></div>
-    <div class="feedback" id="feedback">
-      <div class="icon" id="fb-icon"></div>
-      <div class="fb-text">
-        <strong id="fb-title"></strong>
-        <span id="fb-explain"></span>
-      </div>
-    </div>
-    <button class="next-btn" id="next-btn" onclick="nextQuestion()">Next Question →</button>
-  </div>
+  <form id="quizForm" style="display:none">
+    <div id="questions-container"></div>
 
-  <div id="results-screen">
-    <div class="card results">
-      <span class="results-emoji" id="results-emoji"></span>
-      <h2 id="results-title"></h2>
-      <p class="sub" id="results-sub"></p>
-      <div class="score-display">
-        <div class="score-big" id="final-score">0</div>
-        <div class="score-denom">/10</div>
-      </div>
-      <div class="stars-row" id="stars-row"></div>
-      <div class="category-breakdown" id="cat-breakdown"></div>
-      <div class="sync-status syncing" id="sync-status">
-        <div class="sync-dot pulse" id="sync-dot"></div>
-        <span id="sync-text">Saving results...</span>
-      </div>
-      <button class="retry-btn" onclick="restartQuiz()">Try Again 🔄</button>
+    <button type="button" id="checkBtn" onclick="gradeQuiz()">Check Answers</button>
+    <button type="button" id="showAnswersBtn" onclick="showAnswers()" disabled>Show Answers</button>
+    <button type="reset" onclick="clearFeedback()">Reset</button>
+
+    <div id="score" class="result"></div>
+    <div class="sync-status syncing" id="sync-status" style="display:none">
+      <div class="sync-dot pulse" id="sync-dot"></div>
+      <span id="sync-text">Saving results…</span>
     </div>
-  </div>
-</div>
+  </form>
 
 <script>
   const SUPABASE_URL = 'https://jivcocultvmibdhnuncw.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_orpPb5Con2_VAdyH_EiQUw_S6SbtgrZ';
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  const TOPIC_COLORS = {
-    'Proportional Relationships':      '#ffd166',
-    'Percentages & Rates':             '#ffd166',
-    'Rational Numbers':                '#ff6b6b',
-    'Expressions & Equations':         '#06d6a0',
-    'Statistics & Probability':        '#c77dff',
-    'Linear Functions':                '#c77dff',
-    'Systems of Equations':            '#74b9ff',
-    'Geometry':                        '#74b9ff',
-    'The Pythagorean Theorem':         '#74b9ff',
-    'Exponents & Scientific Notation': '#ff9f43',
-  };
-
-  function topicColor(t) { return TOPIC_COLORS[t] || '#a7a5c3'; }
-
   // Fallback questions used when Supabase has no questions for today
   const FALLBACK_QUESTIONS = [
-    {
-      topic: 'Proportional Relationships', grade: '7th',
-      question_text: 'A recipe uses 2.5 cups of flour for 12 cookies. How many cups are needed for 36 cookies?',
-      options: ['5 cups', '6.5 cups', '7.5 cups', '9 cups'], answer_index: 2,
-      explanation: '36 ÷ 12 = 3× the recipe. 2.5 × 3 = 7.5 cups.'
-    },
-    {
-      topic: 'Percentages & Rates', grade: '7th',
-      question_text: 'A jacket costs $80 and is 35% off. What is the sale price?',
-      options: ['$28', '$45', '$52', '$55'], answer_index: 2,
-      explanation: 'Discount = 35% × 80 = $28. Sale price = 80 − 28 = $52.'
-    },
-    {
-      topic: 'Rational Numbers', grade: '7th',
-      question_text: 'Evaluate: −3/4 + 5/8',
-      options: ['−1/8', '1/8', '−3/8', '3/8'], answer_index: 0,
-      explanation: 'Convert to eighths: −6/8 + 5/8 = −1/8.'
-    },
-    {
-      topic: 'Expressions & Equations', grade: '7th',
-      question_text: 'Solve for x: 3x − 7 = 14',
-      options: ['x = 3', 'x = 7', 'x = 21', 'x = 9'], answer_index: 1,
-      explanation: 'Add 7: 3x = 21. Divide by 3: x = 7.'
-    },
-    {
-      topic: 'Statistics & Probability', grade: '7th',
-      question_text: 'Two fair six-sided dice are rolled. What is the probability the sum is 8?',
-      options: ['5/36', '1/6', '7/36', '1/4'], answer_index: 0,
-      explanation: 'Pairs that sum to 8: (2,6),(3,5),(4,4),(5,3),(6,2) = 5 out of 36.'
-    },
-    {
-      topic: 'Linear Functions', grade: '8th',
-      question_text: 'What is the slope of the line through (2, 5) and (6, 13)?',
-      options: ['1', '2', '3', '4'], answer_index: 1,
-      explanation: 'Slope = (13 − 5) / (6 − 2) = 8 / 4 = 2.'
-    },
-    {
-      topic: 'Systems of Equations', grade: '8th',
-      question_text: 'Solve: y = 2x + 1 and y = −x + 7. What is x?',
-      options: ['x = 1', 'x = 2', 'x = 3', 'x = 4'], answer_index: 1,
-      explanation: '2x + 1 = −x + 7 → 3x = 6 → x = 2.'
-    },
-    {
-      topic: 'Geometry', grade: '8th',
-      question_text: 'A circle has radius 5 cm. What is its area? (Use π ≈ 3.14)',
-      options: ['15.7 cm²', '31.4 cm²', '78.5 cm²', '62.8 cm²'], answer_index: 2,
-      explanation: 'Area = πr² = 3.14 × 25 = 78.5 cm².'
-    },
-    {
-      topic: 'The Pythagorean Theorem', grade: '8th',
-      question_text: 'A right triangle has legs of 6 cm and 8 cm. What is the hypotenuse?',
-      options: ['10 cm', '12 cm', '14 cm', '√100 cm'], answer_index: 0,
-      explanation: 'c² = 36 + 64 = 100, so c = 10 cm.'
-    },
-    {
-      topic: 'Exponents & Scientific Notation', grade: '8th',
-      question_text: 'Simplify: 2³ × 2⁴',
-      options: ['2⁷', '2¹²', '4⁷', '8⁷'], answer_index: 0,
-      explanation: 'Same base → add exponents: 2³ × 2⁴ = 2⁷.'
-    }
+    { topic: 'Multi-Step Equation',           grade: '7th', question_text: 'Solve for x: 3(x − 4) + 5 = 2x + 12', correct_answer: '19', answer_hint: null, explanation: 'Expand: 3x − 12 + 5 = 2x + 12 → x = 19.' },
+    { topic: 'Rational Numbers',              grade: '7th', question_text: 'Solve: x/3 + x/6 = 15', correct_answer: '30', answer_hint: null, explanation: 'Multiply through by 6: 2x + x = 90 → x = 30.' },
+    { topic: 'Percentages & Rates',           grade: '7th', question_text: "A jacket's price is increased by 20% then decreased by 20%. The final price is $96. What was the original price?", correct_answer: '100', answer_hint: 'Just the number', explanation: 'After +20% then −20%: price × 1.2 × 0.8 = price × 0.96. So 0.96p = 96 → p = 100.' },
+    { topic: 'Proportional Relationships',    grade: '7th', question_text: 'The ratio of boys to girls is 5:7. If there are 84 students, how many are boys?', correct_answer: '35', answer_hint: null, explanation: '84 × 5/12 = 35 boys.' },
+    { topic: 'Geometry',                      grade: '7th', question_text: 'A rectangle has a perimeter of 50 cm. Its length is 3 cm more than twice its width. Find the dimensions.', correct_answer: 'width 8 length 19', answer_hint: 'Format: width 8 length 19', explanation: '2(w + 2w+3) = 50 → w = 8, l = 19.' },
+    { topic: 'The Pythagorean Theorem',       grade: '8th', question_text: 'A ladder is placed against a wall. The foot is 9 ft from the wall and the top reaches 12 ft up. How long is the ladder?', correct_answer: '15', answer_hint: 'Just the number', explanation: 'c² = 9² + 12² = 81 + 144 = 225 → c = 15 ft.' },
+    { topic: 'Statistics & Probability',      grade: '7th', question_text: 'Two fair six-sided dice are rolled. What is the probability the sum is exactly 8?', correct_answer: '5/36', answer_hint: 'Simplified fraction', explanation: 'Pairs summing to 8: (2,6),(3,5),(4,4),(5,3),(6,2) = 5 out of 36.' },
+    { topic: 'Linear Functions',              grade: '8th', question_text: 'For y = 4x − 3, find y when x = −2. Then say whether (3, 9) lies on the graph.', correct_answer: '-11 yes', answer_hint: 'Format: -11 yes  or  -11 no', explanation: 'y = 4(−2)−3 = −11. Check (3,9): 4(3)−3 = 9 ✓ yes.' },
+    { topic: 'Expressions & Equations',       grade: '7th', question_text: 'Three consecutive integers have a sum of 72. What are the integers?', correct_answer: '23 24 25', answer_hint: 'Three numbers separated by spaces', explanation: 'n + (n+1) + (n+2) = 72 → n = 23.' },
+    { topic: 'Exponents & Scientific Notation', grade: '8th', question_text: 'A tank is 3/5 full. After adding 24 gallons it becomes 3/4 full. What is the total capacity?', correct_answer: '160', answer_hint: 'Just the number', explanation: '3/4 − 3/5 = 3/20. So 3/20 × capacity = 24 → capacity = 160.' },
   ];
 
-  const letters = ['A','B','C','D'];
   let questions = [];
-  let current = 0, score = 0, answered = false, categoryScores = {};
 
-  // Fetch today's questions from Supabase; fall back to hardcoded set
+  function clean(s) {
+    return s.toLowerCase().replace(/\$/g,'').replace(/,/g,'').replace(/\s+/g,' ').trim();
+  }
+
+  function renderQuestions() {
+    const container = document.getElementById('questions-container');
+    container.innerHTML = questions.map((q, i) => `
+      <div class="question">
+        <h3>${i + 1}. ${q.topic}</h3>
+        <p>${q.question_text}</p>
+        ${q.answer_hint ? `<p class="hint">${q.answer_hint}</p>` : ''}
+        <input id="q${i+1}" placeholder="Your answer" />
+        <div id="f${i+1}" class="feedback"></div>
+      </div>
+    `).join('');
+  }
+
   async function initQuestions() {
     const today = new Date().toISOString().split('T')[0];
     const { data, error } = await supabaseClient
       .from('questions')
-      .select('topic, grade, question_text, options, answer_index, explanation')
+      .select('topic, grade, question_text, correct_answer, answer_hint, explanation')
       .eq('session_date', today)
       .order('id');
 
     if (!error && data && data.length === 10) {
       questions = data;
     } else {
-      // Fall back to most recent date if today has none
+      // Fall back to most recent date
       const { data: recent } = await supabaseClient
         .from('questions')
-        .select('topic, grade, question_text, options, answer_index, explanation')
+        .select('topic, grade, question_text, correct_answer, answer_hint, explanation')
         .order('session_date', { ascending: false })
         .order('id')
         .limit(10);
       questions = (recent && recent.length === 10) ? recent : FALLBACK_QUESTIONS;
     }
 
-    document.getElementById('start-btn').disabled = false;
-    document.getElementById('start-label').textContent = 'Start Quiz 🚀';
+    document.getElementById('loading-msg').style.display = 'none';
+    renderQuestions();
+    document.getElementById('quizForm').style.display = 'block';
   }
 
-  function startQuiz() {
-    document.getElementById('start-screen').style.display = 'none';
-    document.getElementById('quiz-screen').classList.add('active');
-    loadQuestion();
-  }
+  function gradeQuiz() {
+    let score = 0;
+    let allFilled = true;
+    const topicResults = {};
 
-  function loadQuestion() {
-    answered = false;
-    const q = questions[current];
-    document.getElementById('q-counter').textContent = `Question ${current + 1} of 10`;
-    document.getElementById('progress-fill').style.width = `${(current / 10) * 100}%`;
-    const tag = document.getElementById('topic-tag');
-    const color = topicColor(q.topic);
-    tag.textContent = `${q.grade} Grade · ${q.topic}`;
-    tag.style.background = color + '20';
-    tag.style.color = color;
-    tag.style.border = `1.5px solid ${color}50`;
-    document.getElementById('q-number').textContent = `Question ${current + 1}`;
-    document.getElementById('question-text').textContent = q.question_text;
-    const grid = document.getElementById('options-grid');
-    grid.innerHTML = '';
-    q.options.forEach((opt, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'option-btn';
-      btn.innerHTML = `<span class="letter">${letters[i]}</span>${opt}`;
-      btn.onclick = () => selectAnswer(i);
-      grid.appendChild(btn);
+    questions.forEach((q, i) => {
+      const val = document.getElementById(`q${i+1}`).value;
+      if (!val.trim()) allFilled = false;
+      const ok = clean(val) === clean(q.correct_answer);
+      if (!topicResults[q.topic]) topicResults[q.topic] = { correct: 0, total: 0 };
+      topicResults[q.topic].total++;
+      if (ok) {
+        score++;
+        topicResults[q.topic].correct++;
+      }
+      const f = document.getElementById(`f${i+1}`);
+      f.textContent = ok ? 'Correct!' : 'Not quite. Try again.';
+      f.className = `feedback ${ok ? 'correct' : 'wrong'}`;
     });
-    document.getElementById('feedback').className = 'feedback';
-    document.getElementById('next-btn').className = 'next-btn';
-    const card = document.getElementById('question-card');
-    card.style.animation = 'none';
-    void card.offsetWidth;
-    card.style.animation = 'slideUp 0.4s cubic-bezier(0.4,0,0.2,1)';
+
+    document.getElementById('score').textContent = `Score: ${score} / 10`;
+    document.getElementById('showAnswersBtn').disabled = !allFilled;
+    saveResults(score, topicResults);
   }
 
-  function selectAnswer(chosen) {
-    if (answered) return;
-    answered = true;
-    const q = questions[current];
-    const btns = document.querySelectorAll('.option-btn');
-    btns.forEach(b => b.disabled = true);
-    const isCorrect = chosen === q.answer_index;
-    if (!categoryScores[q.topic]) categoryScores[q.topic] = { correct: 0, total: 0 };
-    categoryScores[q.topic].total++;
-    if (isCorrect) {
-      categoryScores[q.topic].correct++;
-      score++;
-      document.getElementById('live-score').textContent = score;
-    }
-    btns[q.answer_index].classList.add('correct');
-    if (!isCorrect) {
-      btns[chosen].classList.add('wrong');
-      document.getElementById('options-grid').classList.add('shake');
-      setTimeout(() => document.getElementById('options-grid').classList.remove('shake'), 400);
-    }
-    const fb = document.getElementById('feedback');
-    document.getElementById('fb-icon').textContent = isCorrect ? '✓' : '✗';
-    document.getElementById('fb-title').textContent = isCorrect ? 'Correct! Nice work!' : 'Not quite!';
-    document.getElementById('fb-explain').textContent = q.explanation;
-    fb.className = `feedback show ${isCorrect ? 'correct-fb' : 'wrong-fb'}`;
-    const nxt = document.getElementById('next-btn');
-    nxt.textContent = current < 9 ? 'Next Question →' : 'See Results 🎉';
-    nxt.className = 'next-btn show';
+  function showAnswers() {
+    questions.forEach((q, i) => {
+      const f = document.getElementById(`f${i+1}`);
+      f.textContent = `Answer: ${q.correct_answer}${q.explanation ? ' — ' + q.explanation : ''}`;
+      f.className = 'feedback';
+    });
   }
 
-  function nextQuestion() {
-    current++;
-    if (current < 10) { loadQuestion(); } else { showResults(); }
+  function clearFeedback() {
+    questions.forEach((_, i) => {
+      document.getElementById(`f${i+1}`).textContent = '';
+      document.getElementById(`f${i+1}`).className = 'feedback';
+    });
+    document.getElementById('score').textContent = '';
+    document.getElementById('showAnswersBtn').disabled = true;
+    document.getElementById('sync-status').style.display = 'none';
   }
 
-  function showResults() {
-    document.getElementById('quiz-screen').classList.remove('active');
-    document.getElementById('results-screen').classList.add('active');
-    const pct = score / 10;
-    let emoji, title, sub;
-    if (pct === 1)       { emoji='🏆'; title='Perfect Score!';    sub='Absolutely flawless. You crushed it!'; }
-    else if (pct >= 0.8) { emoji='🌟'; title='Excellent Work!';   sub="You've really got these concepts down."; }
-    else if (pct >= 0.6) { emoji='👍'; title='Good Job!';         sub="Solid effort — review a couple topics and you'll ace it."; }
-    else if (pct >= 0.4) { emoji='📚'; title='Keep Practicing!';  sub="You're getting there. Review the explanations and try again!"; }
-    else                 { emoji='💪'; title="Don't Give Up!";     sub='Every expert was once a beginner. Review and retry!'; }
-    document.getElementById('results-emoji').textContent = emoji;
-    document.getElementById('results-title').textContent = title;
-    document.getElementById('results-sub').textContent = sub;
-    let n = 0;
-    const scoreEl = document.getElementById('final-score');
-    const iv = setInterval(() => { n++; scoreEl.textContent = n; if (n >= score) clearInterval(iv); }, 80);
-    const filled = Math.round(pct * 5);
-    document.getElementById('stars-row').innerHTML =
-      Array.from({length:5}, (_,i) => `<span style="opacity:${i<filled?1:0.2}">⭐</span>`).join('');
-    const rows = Object.entries(categoryScores).map(([topic, {correct, total}]) => {
-      const cls = correct===total ? 'full' : correct>0 ? 'partial' : 'none';
-      return `<div class="cat-row"><span class="cat-name">${topic}</span><span class="cat-score ${cls}">${correct}/${total}</span></div>`;
-    }).join('');
-    document.getElementById('cat-breakdown').innerHTML = `<h3>By Topic</h3>${rows}`;
-    saveResults();
-  }
-
-  async function saveResults() {
-    const syncEl  = document.getElementById('sync-status');
+  async function saveResults(score, topicResults) {
+    const syncEl   = document.getElementById('sync-status');
     const syncText = document.getElementById('sync-text');
     const syncDot  = document.getElementById('sync-dot');
+    syncEl.style.display = 'flex';
+    syncEl.className = 'sync-status syncing';
+    syncDot.classList.add('pulse');
+    syncText.textContent = 'Saving results…';
+
     const sessionId = Date.now().toString(36);
-    const rows = Object.entries(categoryScores).map(([topic, {correct, total}]) => ({
+    const rows = Object.entries(topicResults).map(([topic, {correct, total}]) => ({
       session_id: sessionId,
       topic,
       correct_answers: correct,
@@ -513,28 +222,19 @@
       total_score: score,
       total_quiz_questions: 10
     }));
+
     const { error } = await supabaseClient.from('quiz_results').insert(rows);
+    syncDot.classList.remove('pulse');
     if (error) {
       syncEl.className = 'sync-status sync-err';
-      syncDot.classList.remove('pulse');
       syncText.textContent = '✗ Could not save results';
       console.error(error);
     } else {
       syncEl.className = 'sync-status synced';
-      syncDot.classList.remove('pulse');
       syncText.textContent = '✓ Results saved!';
     }
   }
 
-  function restartQuiz() {
-    current = 0; score = 0; answered = false; categoryScores = {};
-    document.getElementById('live-score').textContent = '0';
-    document.getElementById('results-screen').classList.remove('active');
-    document.getElementById('quiz-screen').classList.add('active');
-    loadQuestion();
-  }
-
-  // Kick off question loading immediately
   initQuestions();
 </script>
 </body>
