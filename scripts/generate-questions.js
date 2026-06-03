@@ -1,5 +1,5 @@
-// Generates 15 daily text-input quiz questions via Gemini and inserts them into Supabase.
-// Reads <student>-difficulty-config.json (produced by adaptive-coach.js) to tailor per-topic difficulty.
+// Generates daily text-input quiz questions via Gemini and inserts them into Supabase.
+// Reads config.json for questionsPerSession and <student>-difficulty-config.json for per-topic difficulty.
 // Run automatically by GitHub Actions at 3 AM UTC, or manually: STUDENT=gia node scripts/generate-questions.js
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -7,6 +7,7 @@ const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
 
+const { questionsPerSession } = require('../config.json');
 const STUDENT = process.env.STUDENT || 'gia';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -54,6 +55,10 @@ const TOPICS_BY_STUDENT = {
 
 const TOPICS = TOPICS_BY_STUDENT[STUDENT] || TOPICS_BY_STUDENT.gia;
 
+if (TOPICS.length !== questionsPerSession) {
+  throw new Error(`Topic count (${TOPICS.length}) does not match questionsPerSession (${questionsPerSession}) in config.json`);
+}
+
 const STANDARD_INSTRUCTION = 'Generate a standard grade-appropriate problem with moderate complexity.';
 
 function loadDifficultyConfig() {
@@ -87,7 +92,7 @@ async function main() {
     console.log('No difficulty config found — using standard difficulty for all topics.');
   }
 
-  console.log(`Generating questions for ${STUDENT} on ${today}...`);
+  console.log(`Generating ${questionsPerSession} questions for ${STUDENT} on ${today}...`);
 
   const topicList = TOPICS.map((t, i) => {
     const d = diffConfig?.topicDifficulties?.[t.topic];
@@ -103,7 +108,31 @@ async function main() {
     generationConfig: { responseMimeType: 'application/json' },
   });
 
-  const result = await model.generateContent(`Create 15 short-answer math questions for a ${grades} grade student following Khan Academy curriculum. One question per topic in the exact order listed. Each topic has a difficulty tag and instruction that you MUST follow precisely.\n\nTopics (with difficulty instructions):\n${topicList}\n\nDifficulty guide:\n- [FOUNDATIONAL]: Basic single-step problems, simple numbers, rebuild confidence\n- [STANDARD]: Grade-appropriate, moderate complexity\n- [CHALLENGING]: Multi-step reasoning, harder numbers, less obvious approach\n- [ADVANCED]: Complex multi-step problems, pushes well beyond grade level\n\nFor each question return a JSON object with these fields:\n- "topic": exact topic string from the list\n- "grade": grade level string (e.g. "4th", "5th", "7th", "8th")\n- "question_text": the question (follow the difficulty instruction for that topic exactly)\n- "correct_answer": the single canonical answer a student should type (e.g. "30", "5/36", "15 ft"). Keep it as simple as possible — just the number or value, no working.\n- "answer_hint": short format guide shown under the input (e.g. "Enter just the number", "Simplified fraction", "Include units"). Omit if the format is obvious.\n- "explanation": 1–2 sentence step-by-step solution\n\nConstraints:\n- Questions must be solvable without a calculator\n- correct_answer must be a simple string a student can type exactly\n- Vary question types: equations, word problems, geometry, probability\n\nReturn a JSON object with a single key "questions" containing an array of 15 objects.`);
+  const result = await model.generateContent(`Create ${questionsPerSession} short-answer math questions for a ${grades} grade student following Khan Academy curriculum. One question per topic in the exact order listed. Each topic has a difficulty tag and instruction that you MUST follow precisely.
+
+Topics (with difficulty instructions):
+${topicList}
+
+Difficulty guide:
+- [FOUNDATIONAL]: Basic single-step problems, simple numbers, rebuild confidence
+- [STANDARD]: Grade-appropriate, moderate complexity
+- [CHALLENGING]: Multi-step reasoning, harder numbers, less obvious approach
+- [ADVANCED]: Complex multi-step problems, pushes well beyond grade level
+
+For each question return a JSON object with these fields:
+- "topic": exact topic string from the list
+- "grade": grade level string (e.g. "4th", "5th", "7th", "8th")
+- "question_text": the question (follow the difficulty instruction for that topic exactly)
+- "correct_answer": the single canonical answer a student should type (e.g. "30", "5/36", "15 ft"). Keep it as simple as possible — just the number or value, no working.
+- "answer_hint": short format guide shown under the input (e.g. "Enter just the number", "Simplified fraction", "Include units"). Omit if the format is obvious.
+- "explanation": 1–2 sentence step-by-step solution
+
+Constraints:
+- Questions must be solvable without a calculator
+- correct_answer must be a simple string a student can type exactly
+- Vary question types: equations, word problems, geometry, probability
+
+Return a JSON object with a single key "questions" containing an array of ${questionsPerSession} objects.`);
 
   const raw = result.response.text().trim();
   const parsed = JSON.parse(raw);
@@ -112,8 +141,8 @@ async function main() {
     console.error('Raw response:', raw);
     throw new Error('Gemini did not return a questions array.');
   }
-  if (questions.length !== 15) {
-    throw new Error(`Expected 15 questions, got ${questions.length}`);
+  if (questions.length !== questionsPerSession) {
+    throw new Error(`Expected ${questionsPerSession} questions, got ${questions.length}`);
   }
 
   const rows = questions.map(q => ({ ...q, session_date: today, student: STUDENT }));

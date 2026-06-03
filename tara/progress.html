@@ -214,6 +214,7 @@
     const sessionList = Object.values(sessions).sort((a, b) => new Date(a.date) - new Date(b.date));
 
     const totalAttempts = sessionList.length;
+    const maxScore = totalAttempts ? Math.max(...sessionList.map(r => r.total)) : 15;
     const avgScore = totalAttempts ? Math.round(sessionList.reduce((s, r) => s + r.score, 0) / totalAttempts * 10) / 10 : 0;
     const bestScore = totalAttempts ? Math.max(...sessionList.map(r => r.score)) : 0;
 
@@ -233,12 +234,12 @@
         </div>
         <div class="stat-card c2">
           <div class="stat-label">Average Score</div>
-          <div class="stat-value c2">${avgScore}<span style="font-size:16px;color:var(--muted)">/10</span></div>
-          <div class="stat-sub">${Math.round(avgScore * 10)}% accuracy</div>
+          <div class="stat-value c2">${avgScore}<span style="font-size:16px;color:var(--muted)">/${maxScore}</span></div>
+          <div class="stat-sub">${Math.round(avgScore / maxScore * 100)}% accuracy</div>
         </div>
         <div class="stat-card c3">
           <div class="stat-label">Best Score</div>
-          <div class="stat-value c3">${bestScore}<span style="font-size:16px;color:var(--muted)">/10</span></div>
+          <div class="stat-value c3">${bestScore}<span style="font-size:16px;color:var(--muted)">/${maxScore}</span></div>
           <div class="stat-sub">personal best</div>
         </div>
       </div>
@@ -324,7 +325,7 @@
           borderColor: '#c77dff',
           backgroundColor: 'rgba(199,125,255,0.08)',
           borderWidth: 2.5,
-          pointBackgroundColor: scores.map(s => s >= 8 ? '#06d6a0' : s >= 5 ? '#ffd166' : '#ff6b6b'),
+          pointBackgroundColor: scores.map(s => s >= maxScore * 0.8 ? '#06d6a0' : s >= maxScore * 0.53 ? '#ffd166' : '#ff6b6b'),
           pointBorderColor: 'transparent',
           pointRadius: 5,
           tension: 0.35,
@@ -336,11 +337,11 @@
         plugins: { legend: { display: false }, tooltip: {
           backgroundColor: '#1a1927', borderColor: '#2e2c45', borderWidth: 1,
           titleColor: '#a7a5c3', bodyColor: '#fffffe',
-          callbacks: { label: ctx => ` Score: ${ctx.parsed.y} / 10` }
+          callbacks: { label: ctx => ` Score: ${ctx.parsed.y} / ${maxScore}` }
         }},
         scales: {
           x: { grid: { color: '#2e2c45' }, ticks: { color: '#a7a5c3', font: { family: 'Space Mono', size: 11 } } },
-          y: { min: 0, max: 10, grid: { color: '#2e2c45' }, ticks: { color: '#a7a5c3', font: { family: 'Space Mono', size: 11 }, stepSize: 2 } }
+          y: { min: 0, max: maxScore, grid: { color: '#2e2c45' }, ticks: { color: '#a7a5c3', font: { family: 'Space Mono', size: 11 }, stepSize: Math.ceil(maxScore / 5) } }
         }
       }
     });

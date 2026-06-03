@@ -77,7 +77,7 @@
 </head>
 <body>
   <h1>Advanced 7th–8th Grade Math Challenge</h1>
-  <p>Try all 10 questions. Enter simplified answers where possible. For word problems, include only the number or dimensions requested.</p>
+  <p>Try all 15 questions. Enter simplified answers where possible. For word problems, include only the number or dimensions requested.</p>
   <p style="margin-top:6px"><a href="progress.html" style="color:#2563eb;font-size:14px">View Progress →</a></p>
 
   <div id="loading-msg">Loading today's questions…</div>
@@ -112,9 +112,22 @@
     { topic: 'Linear Functions',              grade: '8th', question_text: 'For y = 4x − 3, find y when x = −2. Then say whether (3, 9) lies on the graph.', correct_answer: '-11 yes', answer_hint: 'Format: -11 yes  or  -11 no', explanation: 'y = 4(−2)−3 = −11. Check (3,9): 4(3)−3 = 9 ✓ yes.' },
     { topic: 'Expressions & Equations',       grade: '7th', question_text: 'Three consecutive integers have a sum of 72. What are the integers?', correct_answer: '23 24 25', answer_hint: 'Three numbers separated by spaces', explanation: 'n + (n+1) + (n+2) = 72 → n = 23.' },
     { topic: 'Exponents & Scientific Notation', grade: '8th', question_text: 'A tank is 3/5 full. After adding 24 gallons it becomes 3/4 full. What is the total capacity?', correct_answer: '160', answer_hint: 'Just the number', explanation: '3/4 − 3/5 = 3/20. So 3/20 × capacity = 24 → capacity = 160.' },
+    { topic: 'Inequalities',       grade: '7th', question_text: 'Solve: 2x + 3 > 11', correct_answer: 'x > 4', answer_hint: null, explanation: '2x > 8 → x > 4.' },
+    { topic: 'Angles & Triangles', grade: '7th', question_text: 'A triangle has angles of 45° and 75°. What is the third angle?', correct_answer: '60', answer_hint: 'Degrees', explanation: '180 − 45 − 75 = 60°.' },
+    { topic: 'Surface Area & Volume', grade: '8th', question_text: 'A box is 5 cm × 4 cm × 3 cm. What is its volume?', correct_answer: '60', answer_hint: 'cm³', explanation: '5 × 4 × 3 = 60 cm³.' },
+    { topic: 'Data & Scatter Plots', grade: '8th', question_text: 'A scatter plot shows points going up from left to right. Is the correlation positive or negative?', correct_answer: 'positive', answer_hint: null, explanation: 'Points rising left to right indicate a positive correlation.' },
+    { topic: 'Transformations', grade: '8th', question_text: 'Point A is at (3, 5). After reflection over the x-axis, what are the new coordinates?', correct_answer: '(3, -5)', answer_hint: 'Format: (x, y)', explanation: 'Reflecting over the x-axis negates the y-coordinate: (3, 5) → (3, −5).' },
   ];
 
   let questions = [];
+  let QUESTION_COUNT = 15;
+
+  async function loadConfig() {
+    try {
+      const cfg = await fetch('../config.json').then(r => r.json());
+      QUESTION_COUNT = cfg.questionsPerSession || QUESTION_COUNT;
+    } catch {}
+  }
 
   function clean(s) {
     return s.toLowerCase().replace(/\$/g,'').replace(/,/g,'').replace(/\s+/g,' ').trim();
@@ -134,6 +147,7 @@
   }
 
   async function initQuestions() {
+    await loadConfig();
     const today = new Date().toISOString().split('T')[0];
     const { data, error } = await supabaseClient
       .from('questions')
@@ -142,7 +156,7 @@
       .eq('student', 'gia')
       .order('id');
 
-    if (!error && data && data.length === 10) {
+    if (!error && data && data.length === QUESTION_COUNT) {
       questions = data;
     } else {
       const { data: recent } = await supabaseClient
@@ -151,8 +165,8 @@
         .eq('student', 'gia')
         .order('session_date', { ascending: false })
         .order('id')
-        .limit(10);
-      questions = (recent && recent.length === 10) ? recent : FALLBACK_QUESTIONS;
+        .limit(QUESTION_COUNT);
+      questions = (recent && recent.length === QUESTION_COUNT) ? recent : FALLBACK_QUESTIONS;
     }
 
     document.getElementById('loading-msg').style.display = 'none';
@@ -180,7 +194,7 @@
       f.className = `feedback ${ok ? 'correct' : 'wrong'}`;
     });
 
-    document.getElementById('score').textContent = `Score: ${score} / 10`;
+    document.getElementById('score').textContent = `Score: ${score} / ${questions.length}`;
     document.getElementById('showAnswersBtn').disabled = !allFilled;
     saveResults(score, topicResults);
   }
@@ -221,7 +235,7 @@
       total_questions: total,
       percentage: Math.round((correct / total) * 100),
       total_score: score,
-      total_quiz_questions: 10
+      total_quiz_questions: questions.length
     }));
 
     const { error } = await supabaseClient.from('quiz_results').insert(rows);

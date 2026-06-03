@@ -77,7 +77,7 @@
 </head>
 <body>
   <h1>4th–5th Grade Math Challenge</h1>
-  <p>Try all 10 questions. Enter simplified answers where possible. For word problems, include only the number or value requested.</p>
+  <p>Try all 15 questions. Enter simplified answers where possible. For word problems, include only the number or value requested.</p>
   <p style="margin-top:6px"><a href="progress.html" style="color:#7c3aed;font-size:14px">View Progress →</a></p>
 
   <div id="loading-msg">Loading today's questions…</div>
@@ -112,9 +112,22 @@
     { topic: 'Decimal Operations',          grade: '5th', question_text: 'What is 4.5 × 0.6?', correct_answer: '2.7', answer_hint: null, explanation: '4.5 × 0.6: 45 × 6 = 270, then place decimal → 2.7.' },
     { topic: 'Volume',                      grade: '5th', question_text: 'A box is 5 cm long, 4 cm wide, and 3 cm tall. What is its volume?', correct_answer: '60', answer_hint: 'Just the number in cm³', explanation: 'Volume = 5 × 4 × 3 = 60 cm³.' },
     { topic: 'Coordinate Plane',            grade: '5th', question_text: 'Point A is at (2, 4). Point B is at (6, 4). What is the distance between them?', correct_answer: '4', answer_hint: 'Just the number', explanation: 'Same y-coordinate, so distance = |6 − 2| = 4 units.' },
+    { topic: 'Measurement & Conversion',   grade: '4th', question_text: 'How many centimeters are in 3 meters?', correct_answer: '300', answer_hint: 'Just the number', explanation: '1 meter = 100 cm. 3 × 100 = 300 cm.' },
+    { topic: 'Angles & Geometry',          grade: '4th', question_text: 'How many right angles does a rectangle have?', correct_answer: '4', answer_hint: null, explanation: 'A rectangle has 4 corners, each a 90° right angle.' },
+    { topic: 'Mixed Numbers',              grade: '5th', question_text: 'Convert 17/4 to a mixed number.', correct_answer: '4 1/4', answer_hint: 'Format: 4 1/4', explanation: '17 ÷ 4 = 4 remainder 1, so 17/4 = 4 1/4.' },
+    { topic: 'Number Patterns',            grade: '5th', question_text: 'What are the next two numbers in the pattern: 3, 6, 12, 24, …?', correct_answer: '48 96', answer_hint: 'Two numbers separated by a space', explanation: 'Each number doubles: 24 × 2 = 48, 48 × 2 = 96.' },
+    { topic: 'Data & Graphs',              grade: '5th', question_text: 'A bar chart shows: Red=8, Blue=5, Green=11. How many more Green than Blue?', correct_answer: '6', answer_hint: 'Just the number', explanation: '11 − 5 = 6.' },
   ];
 
   let questions = [];
+  let QUESTION_COUNT = 15;
+
+  async function loadConfig() {
+    try {
+      const cfg = await fetch('../config.json').then(r => r.json());
+      QUESTION_COUNT = cfg.questionsPerSession || QUESTION_COUNT;
+    } catch {}
+  }
 
   function clean(s) {
     return s.toLowerCase().replace(/\$/g,'').replace(/,/g,'').replace(/\s+/g,' ').trim();
@@ -134,6 +147,7 @@
   }
 
   async function initQuestions() {
+    await loadConfig();
     const today = new Date().toISOString().split('T')[0];
     const { data, error } = await supabaseClient
       .from('questions')
@@ -142,7 +156,7 @@
       .eq('student', 'tara')
       .order('id');
 
-    if (!error && data && data.length === 10) {
+    if (!error && data && data.length === QUESTION_COUNT) {
       questions = data;
     } else {
       const { data: recent } = await supabaseClient
@@ -151,8 +165,8 @@
         .eq('student', 'tara')
         .order('session_date', { ascending: false })
         .order('id')
-        .limit(10);
-      questions = (recent && recent.length === 10) ? recent : FALLBACK_QUESTIONS;
+        .limit(QUESTION_COUNT);
+      questions = (recent && recent.length === QUESTION_COUNT) ? recent : FALLBACK_QUESTIONS;
     }
 
     document.getElementById('loading-msg').style.display = 'none';
@@ -180,7 +194,7 @@
       f.className = `feedback ${ok ? 'correct' : 'wrong'}`;
     });
 
-    document.getElementById('score').textContent = `Score: ${score} / 10`;
+    document.getElementById('score').textContent = `Score: ${score} / ${questions.length}`;
     document.getElementById('showAnswersBtn').disabled = !allFilled;
     saveResults(score, topicResults);
   }
@@ -221,7 +235,7 @@
       total_questions: total,
       percentage: Math.round((correct / total) * 100),
       total_score: score,
-      total_quiz_questions: 10
+      total_quiz_questions: questions.length
     }));
 
     const { error } = await supabaseClient.from('quiz_results').insert(rows);
