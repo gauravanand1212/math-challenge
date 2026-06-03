@@ -170,6 +170,7 @@
     allRows.forEach(r => { if (!sessions[r.session_id]) sessions[r.session_id] = { score: r.total_score, total: r.total_quiz_questions, date: r.created_at }; });
     const sessionList = Object.values(sessions).sort((a, b) => new Date(a.date) - new Date(b.date));
     const totalAttempts = sessionList.length;
+    const maxScore = totalAttempts ? Math.max(...sessionList.map(r => r.total)) : 15;
     const avgScore = totalAttempts ? Math.round(sessionList.reduce((s, r) => s + r.score, 0) / totalAttempts * 10) / 10 : 0;
     const bestScore = totalAttempts ? Math.max(...sessionList.map(r => r.score)) : 0;
     const topicMap = {};
@@ -177,8 +178,8 @@
     document.getElementById('app').innerHTML = `
       <div class="stats-grid">
         <div class="stat-card c1"><div class="stat-label">Total Attempts</div><div class="stat-value c1">${totalAttempts}</div><div class="stat-sub">quizzes completed</div></div>
-        <div class="stat-card c2"><div class="stat-label">Average Score</div><div class="stat-value c2">${avgScore}<span style="font-size:16px;color:var(--muted)">/15</span></div><div class="stat-sub">${Math.round(avgScore / 15 * 100)}% accuracy</div></div>
-        <div class="stat-card c3"><div class="stat-label">Best Score</div><div class="stat-value c3">${bestScore}<span style="font-size:16px;color:var(--muted)">/15</span></div><div class="stat-sub">personal best</div></div>
+        <div class="stat-card c2"><div class="stat-label">Average Score</div><div class="stat-value c2">${avgScore}<span style="font-size:16px;color:var(--muted)">/${maxScore}</span></div><div class="stat-sub">${Math.round(avgScore / maxScore * 100)}% accuracy</div></div>
+        <div class="stat-card c3"><div class="stat-label">Best Score</div><div class="stat-value c3">${bestScore}<span style="font-size:16px;color:var(--muted)">/${maxScore}</span></div><div class="stat-sub">personal best</div></div>
       </div>
       <div class="filter-wrap"><div class="section-label">Filter by Topic</div><div class="chips" id="chip-row">${topics.map(t => `<button class="chip ${activeTopics.has(t) ? 'active' : ''}" data-topic="${t}">${t}</button>`).join('')}</div></div>
       <div class="chart-card"><div class="chart-title">Score Over Time</div><div class="chart-wrap"><canvas id="scoreChart"></canvas></div></div>
@@ -196,7 +197,7 @@
     const scores = sessionList.map(r => r.score);
     const ctx = document.getElementById('scoreChart').getContext('2d');
     if (scoreChart) scoreChart.destroy();
-    scoreChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ data: scores, borderColor: '#74b9ff', backgroundColor: 'rgba(116,185,255,0.08)', borderWidth: 2.5, pointBackgroundColor: scores.map(s => s>=12?'#06d6a0':s>=8?'#ffd166':'#ff6b6b'), pointBorderColor: 'transparent', pointRadius: 5, tension: 0.35, fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1a1927', borderColor: '#2e2c45', borderWidth: 1, titleColor: '#a7a5c3', bodyColor: '#fffffe', callbacks: { label: ctx => ` Score: ${ctx.parsed.y} / 15` } } }, scales: { x: { grid: { color: '#2e2c45' }, ticks: { color: '#a7a5c3', font: { family: 'Space Mono', size: 11 } } }, y: { min: 0, max: 15, grid: { color: '#2e2c45' }, ticks: { color: '#a7a5c3', font: { family: 'Space Mono', size: 11 }, stepSize: 3 } } } } });
+    scoreChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ data: scores, borderColor: '#74b9ff', backgroundColor: 'rgba(116,185,255,0.08)', borderWidth: 2.5, pointBackgroundColor: scores.map(s => s>=maxScore*0.8?'#06d6a0':s>=maxScore*0.53?'#ffd166':'#ff6b6b'), pointBorderColor: 'transparent', pointRadius: 5, tension: 0.35, fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1a1927', borderColor: '#2e2c45', borderWidth: 1, titleColor: '#a7a5c3', bodyColor: '#fffffe', callbacks: { label: ctx => ` Score: ${ctx.parsed.y} / ${maxScore}` } } }, scales: { x: { grid: { color: '#2e2c45' }, ticks: { color: '#a7a5c3', font: { family: 'Space Mono', size: 11 } } }, y: { min: 0, max: maxScore, grid: { color: '#2e2c45' }, ticks: { color: '#a7a5c3', font: { family: 'Space Mono', size: 11 }, stepSize: Math.ceil(maxScore / 5) } } } } });
   }
   load();
 </script>

@@ -1,4 +1,4 @@
-name: Generate Daily Questions
+name: Generate Daily Questions — Tara
 
 on:
   schedule:
@@ -22,14 +22,14 @@ jobs:
       - name: Run adaptive coach (assess performance & set difficulty)
         run: node scripts/adaptive-coach.js
         env:
-          STUDENT: gia
+          STUDENT: tara
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
       - name: Generate and save questions
         run: node scripts/generate-questions.js
         env:
-          STUDENT: gia
+          STUDENT: tara
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}

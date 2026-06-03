@@ -120,6 +120,14 @@
   ];
 
   let questions = [];
+  let QUESTION_COUNT = 15;
+
+  async function loadConfig() {
+    try {
+      const cfg = await fetch('../config.json').then(r => r.json());
+      QUESTION_COUNT = cfg.questionsPerSession || QUESTION_COUNT;
+    } catch {}
+  }
 
   function clean(s) {
     return s.toLowerCase().replace(/\$/g,'').replace(/,/g,'').replace(/\s+/g,' ').trim();
@@ -139,6 +147,7 @@
   }
 
   async function initQuestions() {
+    await loadConfig();
     const today = new Date().toISOString().split('T')[0];
     const { data, error } = await supabaseClient
       .from('questions')
@@ -147,7 +156,7 @@
       .eq('student', 'gia')
       .order('id');
 
-    if (!error && data && data.length === 15) {
+    if (!error && data && data.length === QUESTION_COUNT) {
       questions = data;
     } else {
       const { data: recent } = await supabaseClient
@@ -156,8 +165,8 @@
         .eq('student', 'gia')
         .order('session_date', { ascending: false })
         .order('id')
-        .limit(15);
-      questions = (recent && recent.length === 15) ? recent : FALLBACK_QUESTIONS;
+        .limit(QUESTION_COUNT);
+      questions = (recent && recent.length === QUESTION_COUNT) ? recent : FALLBACK_QUESTIONS;
     }
 
     document.getElementById('loading-msg').style.display = 'none';
@@ -185,7 +194,7 @@
       f.className = `feedback ${ok ? 'correct' : 'wrong'}`;
     });
 
-    document.getElementById('score').textContent = `Score: ${score} / 15`;
+    document.getElementById('score').textContent = `Score: ${score} / ${questions.length}`;
     document.getElementById('showAnswersBtn').disabled = !allFilled;
     saveResults(score, topicResults);
   }
@@ -226,7 +235,7 @@
       total_questions: total,
       percentage: Math.round((correct / total) * 100),
       total_score: score,
-      total_quiz_questions: 15
+      total_quiz_questions: questions.length
     }));
 
     const { error } = await supabaseClient.from('quiz_results').insert(rows);
