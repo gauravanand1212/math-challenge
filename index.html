@@ -167,7 +167,7 @@
 <script>
   const SUPABASE_URL = 'https://jivcocultvmibdhnuncw.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_orpPb5Con2_VAdyH_EiQUw_S6SbtgrZ';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 function clean(s) {
   return s.toLowerCase().replace(/\$/g,'').replace(/,/g,'').replace(/\s+/g,' ').trim();
@@ -237,7 +237,7 @@ async function saveResults(score) {
   const syncDot = document.getElementById('sync-dot');
   syncEl.style.display = 'flex';
   const sessionId = Date.now().toString(36);
-  const { error } = await supabase.from('quiz_results').insert([{
+  const { error } = await supabaseClient.from('quiz_results').insert([{
     session_id: sessionId,
     topic: 'Overall',
     correct_answers: score,
