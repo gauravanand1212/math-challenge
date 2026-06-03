@@ -17,11 +17,11 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install openai @supabase/supabase-js
+        run: npm install @google/generative-ai @supabase/supabase-js
 
       - name: Generate and save questions
         run: node scripts/generate-questions.js
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
