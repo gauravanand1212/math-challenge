@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Advanced 7th–8th Grade Math Challenge</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -60,6 +61,17 @@
       color: #555;
       font-size: 14px;
     }
+    .sync-status {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; margin-top: 12px; padding: 10px 16px;
+      border-radius: 10px; font-family: monospace;
+    }
+    .sync-status.syncing { background: rgba(116,185,255,0.1); color: #2563eb; border: 1px solid rgba(116,185,255,0.3); }
+    .sync-status.synced  { background: rgba(6,214,160,0.1);  color: #15803d; border: 1px solid rgba(6,214,160,0.3); }
+    .sync-status.sync-err { background: rgba(255,107,107,0.1); color: #b91c1c; border: 1px solid rgba(255,107,107,0.3); }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .sync-dot.pulse { animation: pulse 1s infinite; }
   </style>
 </head>
 <body>
@@ -146,9 +158,17 @@
     <button type="reset" onclick="clearFeedback()">Reset</button>
 
     <div id="score" class="result"></div>
+    <div class="sync-status syncing" id="sync-status" style="display:none">
+      <div class="sync-dot pulse" id="sync-dot"></div>
+      <span id="sync-text">Saving results...</span>
+    </div>
   </form>
 
 <script>
+  const SUPABASE_URL = 'https://jivcocultvmibdhnuncw.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_orpPb5Con2_VAdyH_EiQUw_S6SbtgrZ';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 function clean(s) {
   return s.toLowerCase().replace(/\$/g,'').replace(/,/g,'').replace(/\s+/g,' ').trim();
 }
@@ -208,6 +228,34 @@ function gradeQuiz() {
   }
   document.getElementById("score").textContent = "Score: " + score + " / 10";
   document.getElementById("showAnswersBtn").disabled = !allFilled;
+  saveResults(score);
+}
+
+async function saveResults(score) {
+  const syncEl = document.getElementById('sync-status');
+  const syncText = document.getElementById('sync-text');
+  const syncDot = document.getElementById('sync-dot');
+  syncEl.style.display = 'flex';
+  const sessionId = Date.now().toString(36);
+  const { error } = await supabase.from('quiz_results').insert([{
+    session_id: sessionId,
+    topic: 'Overall',
+    correct_answers: score,
+    total_questions: 10,
+    percentage: Math.round((score / 10) * 100),
+    total_score: score,
+    total_quiz_questions: 10
+  }]);
+  if (error) {
+    syncEl.className = 'sync-status sync-err';
+    syncDot.classList.remove('pulse');
+    syncText.textContent = '✗ Could not save results';
+    console.error(error);
+  } else {
+    syncEl.className = 'sync-status synced';
+    syncDot.classList.remove('pulse');
+    syncText.textContent = '✓ Results saved!';
+  }
 }
 
 function showAnswers() {
