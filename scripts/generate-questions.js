@@ -1,10 +1,10 @@
-// Generates 10 daily quiz questions via Claude and inserts them into Supabase.
+// Generates 10 daily quiz questions via OpenAI and inserts them into Supabase.
 // Run automatically by GitHub Actions at 3 AM UTC, or manually: node scripts/generate-questions.js
 
-const Anthropic = require('@anthropic-ai/sdk');
+const OpenAI = require('openai');
 const { createClient } = require('@supabase/supabase-js');
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
@@ -45,9 +45,10 @@ async function main() {
     `${i + 1}. ${t.topic} (${t.grade} grade)`
   ).join('\n');
 
-  const message = await anthropic.messages.create({
-    model: 'claude-opus-4-8',
+  const message = await openai.chat.completions.create({
+    model: 'gpt-4o',
     max_tokens: 4096,
+    response_format: { type: 'json_object' },
     messages: [{
       role: 'user',
       content: `Create 10 multiple-choice math questions for 7th and 8th grade students following Khan Academy curriculum. One question per topic, in the exact order listed.
@@ -68,18 +69,17 @@ Constraints:
 - Questions must be solvable without a calculator
 - Vary question formats (word problems, equations, diagrams described in text)
 
-Return ONLY a valid JSON array of 10 objects — no markdown, no commentary.`
+Return a JSON object with a single key "questions" containing an array of 10 objects.`
     }],
   });
 
-  const raw = message.content[0].text.trim();
-  const match = raw.match(/\[[\s\S]*\]/);
-  if (!match) {
+  const raw = message.choices[0].message.content.trim();
+  const parsed = JSON.parse(raw);
+  const questions = parsed.questions || parsed;
+  if (!Array.isArray(questions)) {
     console.error('Raw response:', raw);
-    throw new Error('Claude did not return a JSON array.');
+    throw new Error('OpenAI did not return a questions array.');
   }
-
-  const questions = JSON.parse(match[0]);
   if (questions.length !== 10) {
     throw new Error(`Expected 10 questions, got ${questions.length}`);
   }
