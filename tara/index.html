@@ -130,7 +130,13 @@
   }
 
   function clean(s) {
-    return s.toLowerCase().replace(/\$/g,'').replace(/,/g,'').replace(/\s+/g,' ').trim();
+    return s.toLowerCase()
+      .replace(/\$/g, '')
+      .replace(/[()]/g, '')
+      .replace(/[a-z]\s*=\s*/g, '')
+      .replace(/,/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   function renderQuestions() {
@@ -190,9 +196,14 @@
         topicResults[q.topic].correct++;
       }
       const f = document.getElementById(`f${i+1}`);
-      f.textContent = ok ? 'Correct!' : 'Not quite. Try again.';
+      f.textContent = ok ? 'Correct!' : 'Not quite.';
       f.className = `feedback ${ok ? 'correct' : 'wrong'}`;
     });
+
+    questions.forEach((_, i) => {
+      document.getElementById(`q${i+1}`).disabled = true;
+    });
+    document.getElementById('checkBtn').disabled = true;
 
     document.getElementById('score').textContent = `Score: ${score} / ${questions.length}`;
     document.getElementById('showAnswersBtn').disabled = !allFilled;
