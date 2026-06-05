@@ -132,11 +132,12 @@
   function clean(s) {
     return s.toLowerCase()
       .replace(/\$/g, '')
-      .replace(/[()]/g, '')
-      .replace(/[a-z]\s*=\s*/g, '')
-      .replace(/,/g, '')
+      .replace(/[()[\]]/g, '')
+      .replace(/\b[a-z]\b\s*=\s*/g, '')
+      .replace(/[,;]/g, '')
       .replace(/\s+/g, ' ')
-      .trim();
+      .trim()
+      .replace(/\.$/, '');
   }
 
   function renderQuestions() {
