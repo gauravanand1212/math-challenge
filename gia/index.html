@@ -174,15 +174,38 @@
     document.getElementById('quizForm').style.display = 'block';
   }
 
-  function gradeQuiz() {
-    let score = 0;
+  async function gradeQuiz() {
+    const checkBtn = document.getElementById('checkBtn');
     let allFilled = true;
+    const entries = questions.map((q, i) => {
+      const val = document.getElementById(`q${i+1}`).value;
+      if (!val.trim()) allFilled = false;
+      return { question_text: q.question_text, correct_answer: q.correct_answer, student_answer: val };
+    });
+
+    checkBtn.disabled = true;
+    checkBtn.textContent = 'Checking…';
+
+    let results;
+    try {
+      const { data, error } = await supabaseClient.functions.invoke('grade-answers', {
+        body: { questions: entries },
+      });
+      if (error) throw error;
+      results = data;
+    } catch {
+      // Fall back to normalised exact match if the function is unavailable
+      results = entries.map(e => ({ correct: clean(e.student_answer) === clean(e.correct_answer) }));
+    }
+
+    checkBtn.disabled = false;
+    checkBtn.textContent = 'Check Answers';
+
+    let score = 0;
     const topicResults = {};
 
     questions.forEach((q, i) => {
-      const val = document.getElementById(`q${i+1}`).value;
-      if (!val.trim()) allFilled = false;
-      const ok = clean(val) === clean(q.correct_answer);
+      const ok = results[i]?.correct ?? false;
       if (!topicResults[q.topic]) topicResults[q.topic] = { correct: 0, total: 0 };
       topicResults[q.topic].total++;
       if (ok) {
