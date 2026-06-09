@@ -127,13 +127,14 @@ For each question return a JSON object with these fields:
 - "topic": exact topic string from the list
 - "grade": grade level string (e.g. "4th", "5th", "7th", "8th")
 - "question_text": the question (follow the difficulty instruction for that topic exactly)
-- "correct_answer": the single canonical answer a student should type (e.g. "30", "5/36", "15 ft"). Keep it as simple as possible — just the number or value, no working.
-- "answer_hint": short format guide shown under the input (e.g. "Enter just the number", "Simplified fraction", "Include units"). Omit if the format is obvious.
+- "correct_answer": the numerical value only, no units (e.g. "30", "5/36", "0.75"). Units must appear in the question_text itself, never in the answer.
+- "answer_hint": short format guide shown under the input (e.g. "Simplified fraction", "Round to nearest tenth"). Omit if the format is obvious. Never say "include units".
 - "explanation": 1–2 sentence step-by-step solution
 
 Constraints:
 - Questions must be solvable without a calculator
-- correct_answer must be a simple string a student can type exactly
+- Always embed the expected unit in the question_text (e.g. "What is the area in square feet?", "How many miles per hour?"). Never ask the student to provide units.
+- correct_answer must be a plain number or fraction a student can type exactly — no units
 - Vary question types: equations, word problems, geometry, probability
 
 Return a JSON object with a single key "questions" containing an array of ${questionsPerSession} objects.`);
