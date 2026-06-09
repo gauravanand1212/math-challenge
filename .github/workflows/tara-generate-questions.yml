@@ -2,7 +2,7 @@ name: Generate Daily Questions — Tara
 
 on:
   schedule:
-    - cron: '0 3 * * *'   # 3:00 AM UTC every day
+    - cron: '0 3-23 * * *'  # Every hour 3 AM–11 PM UTC; skips automatically once questions exist
   workflow_dispatch:        # allow manual run from GitHub Actions tab
 
 jobs:
