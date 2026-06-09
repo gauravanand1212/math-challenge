@@ -108,7 +108,7 @@ async function main() {
   const grades = [...new Set(TOPICS.map(t => t.grade))].join(' and ');
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.0-flash',
     generationConfig: { responseMimeType: 'application/json' },
   });
 

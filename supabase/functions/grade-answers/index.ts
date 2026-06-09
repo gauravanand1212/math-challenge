@@ -34,7 +34,7 @@ ${questionList}
 Return ONLY a JSON array of ${questions.length} objects with a single boolean field "correct".
 Example: [{"correct":true},{"correct":false}]`;
 
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent?key=${geminiKey}`;
 
   const geminiRes = await fetch(geminiUrl, {
     method: 'POST',
