@@ -176,10 +176,8 @@
 
   async function gradeQuiz() {
     const checkBtn = document.getElementById('checkBtn');
-    let allFilled = true;
     const entries = questions.map((q, i) => {
       const val = document.getElementById(`q${i+1}`).value;
-      if (!val.trim()) allFilled = false;
       return { question_text: q.question_text, correct_answer: q.correct_answer, student_answer: val };
     });
 
@@ -218,7 +216,7 @@
     });
 
     document.getElementById('score').textContent = `Score: ${score} / ${questions.length}`;
-    document.getElementById('showAnswersBtn').disabled = !allFilled;
+    document.getElementById('showAnswersBtn').disabled = false;
     saveResults(score, topicResults);
   }
 
