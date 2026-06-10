@@ -26,8 +26,16 @@ serve(async (req) => {
   ).join('\n\n');
 
   const prompt = `You are grading a math quiz. For each question, decide if the student's answer is mathematically correct.
-Accept equivalent forms as correct (e.g. "0.5" = "1/2", "15 ft" = "15", "-11 yes" when asked for two parts).
-Ignore minor formatting differences like extra spaces, dollar signs, or capitalisation.
+
+Rules:
+- Accept ANY mathematically equivalent form as correct. Examples:
+  - Fractions/decimals/mixed numbers are interchangeable: "1 1/2" = "3/2" = "1.5"
+  - Improper fractions and mixed numbers are equivalent: "7/4" = "1 3/4"
+  - Unsimplified fractions are correct if equal in value: "2/4" = "1/2"
+  - Scientific notation and standard form are interchangeable: "3000" = "3 × 10³" = "3e3"
+  - Units in the student answer are fine even if not in the correct answer: "15 ft" = "15"
+  - Ignore extra spaces, dollar signs, degree symbols, or capitalisation differences
+- Only mark wrong if the numeric value is actually different from the correct answer.
 
 ${questionList}
 
