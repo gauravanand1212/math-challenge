@@ -114,7 +114,7 @@
     { topic: 'Exponents & Scientific Notation', grade: '8th', question_text: 'A tank is 3/5 full. After adding 24 gallons it becomes 3/4 full. What is the total capacity?', correct_answer: '160', answer_hint: 'Just the number', explanation: '3/4 − 3/5 = 3/20. So 3/20 × capacity = 24 → capacity = 160.' },
     { topic: 'Inequalities',       grade: '7th', question_text: 'Solve: 2x + 3 > 11', correct_answer: 'x > 4', answer_hint: null, explanation: '2x > 8 → x > 4.' },
     { topic: 'Angles & Triangles', grade: '7th', question_text: 'A triangle has angles of 45° and 75°. What is the third angle?', correct_answer: '60', answer_hint: 'Degrees', explanation: '180 − 45 − 75 = 60°.' },
-    { topic: 'Surface Area & Volume', grade: '8th', question_text: 'A box is 5 cm × 4 cm × 3 cm. What is its volume?', correct_answer: '60', answer_hint: 'cm³', explanation: '5 × 4 × 3 = 60 cm³.' },
+    { topic: 'Surface Area & Volume', grade: '8th', question_text: 'A box is 5 cm × 4 cm × 3 cm. What is its volume?', correct_answer: '60', answer_hint: null, explanation: '5 × 4 × 3 = 60 cm³.' },
     { topic: 'Data & Scatter Plots', grade: '8th', question_text: 'A scatter plot shows points going up from left to right. Is the correlation positive or negative?', correct_answer: 'positive', answer_hint: null, explanation: 'Points rising left to right indicate a positive correlation.' },
     { topic: 'Transformations', grade: '8th', question_text: 'Point A is at (3, 5). After reflection over the x-axis, what are the new coordinates?', correct_answer: '(3, -5)', answer_hint: 'Format: (x, y)', explanation: 'Reflecting over the x-axis negates the y-coordinate: (3, 5) → (3, −5).' },
   ];
@@ -139,7 +139,7 @@
       <div class="question">
         <h3>${i + 1}. ${q.topic}</h3>
         <p>${q.question_text}</p>
-        ${q.answer_hint ? `<p class="hint">${q.answer_hint}</p>` : ''}
+        ${q.answer_hint && !/unit/i.test(q.answer_hint) ? `<p class="hint">${q.answer_hint}</p>` : ''}
         <input id="q${i+1}" placeholder="Your answer" />
         <div id="f${i+1}" class="feedback"></div>
       </div>
